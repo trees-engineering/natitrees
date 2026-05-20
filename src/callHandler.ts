@@ -112,32 +112,24 @@ export class CallHandler {
   }
 
   private async agentSpeakFirst(): Promise<void> {
-    const openingLine = "Hey, it's Treelance calling.";
+    await this.sessionReady;
+    const candidateName = this.session?.getCandidateName() ?? 'there';
+    const missingFields = this.session?.getMissingFields().map(f => f.label) ?? [];
+
+    const greeting = `Hey ${candidateName}, this is Treelance from Trees OS — just so you know, you're speaking with an AI. This is just a quick, relaxed chat to get to know you a bit better so we can match you to the right opportunities. Is now an okay time?`;
 
     this.agentSpeaking = true;
     this.agentSpeakingStart = Date.now();
     try {
-      if (!this.interrupted) await this.streamToTwilio(openingLine);
-
-      await this.sessionReady;
-      const candidateName = this.session?.getCandidateName() ?? 'there';
-      const headline = this.session?.getHeadline() ?? null;
-      const missingFields = this.session?.getMissingFields().map(f => f.label) ?? [];
-
-      const continuation = headline
-        ? `I had a look at your profile before calling — great background as a ${headline}. I just wanted to fill in a couple of small gaps so we can match you to the right roles. Have I caught you at an okay time?`
-        : `You registered with us for job matching — I just wanted to fill in a couple of small gaps so we can match you properly. Have I caught you at an okay time?`;
-
-      const sentences = continuation.match(/[^.!?]+[.!?]+/g) ?? [continuation];
+      const sentences = greeting.match(/[^.!?]+[.!?]+/g) ?? [greeting];
       for (const sentence of sentences) {
         if (this.interrupted) break;
         await this.streamToTwilio(sentence.trim());
       }
 
-      const fullGreeting = `${openingLine} ${continuation}`;
       console.log(`[llm] Building prompt for ${candidateName} — missing: ${missingFields.join(', ') || 'none'}`);
       this.llm = createLLM(missingFields, candidateName);
-      this.llm.addMessage('assistant', fullGreeting);
+      this.llm.addMessage('assistant', greeting);
     } finally {
       this.agentSpeaking = false;
     }

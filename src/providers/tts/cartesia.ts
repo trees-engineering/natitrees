@@ -37,7 +37,10 @@ export class CartesiaTTS implements TTSProvider {
           sample_rate: 8000,
         },
         language,
-        speed: 0.85,
+        speed: 0.8,
+        __experimental_controls: {
+          emotion: ['positivity:high', 'curiosity:medium'],
+        },
       }),
     });
 
