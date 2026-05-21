@@ -43,6 +43,22 @@ export class SessionStore {
     return this.stateMachine?.isComplete() ?? false;
   }
 
+  getProfileContext(): Record<string, string> {
+    const p = this.profile;
+    if (!p) return {};
+    const ctx: Record<string, string> = {};
+    if (p.headline) ctx['Headline'] = p.headline;
+    if (p.visa_status) ctx['Visa status'] = p.visa_status;
+    if (p.work_rights) ctx['Work rights'] = p.work_rights;
+    if (p.mobility_regions?.length) ctx['Mobility regions'] = p.mobility_regions.join(', ');
+    if (p.availability_status) ctx['Availability'] = p.availability_status;
+    if (p.available_from) ctx['Available from'] = p.available_from;
+    if (p.notice_period_days != null) ctx['Notice period'] = `${p.notice_period_days} days`;
+    if (p.rate != null) ctx['Rate'] = `${p.rate}${p.rate_type ? ` (${p.rate_type})` : ''}`;
+    if (p.rotation_preference) ctx['Contract preference'] = p.rotation_preference;
+    return ctx;
+  }
+
   async save(history: ConversationMessage[]): Promise<void> {
     if (!this.profile) {
       console.warn('[sessionStore] No profile — skipping save');

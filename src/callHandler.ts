@@ -127,8 +127,9 @@ export class CallHandler {
         await this.streamToTwilio(sentence.trim());
       }
 
+      const profileContext = this.session?.getProfileContext() ?? {};
       console.log(`[llm] Building prompt for ${candidateName} — missing: ${missingFields.join(', ') || 'none'}`);
-      this.llm = createLLM(missingFields, candidateName);
+      this.llm = createLLM(missingFields, candidateName, profileContext);
       this.llm.addMessage('assistant', greeting);
     } finally {
       this.agentSpeaking = false;
@@ -276,16 +277,6 @@ export class CallHandler {
       this.callEndTimer = null;
       if (this.callEndAborted) return;
 
-      const farewell = "Thank you so much for your time. If there's nothing else you'd like to ask or clarify, this call will end shortly.";
-      this.agentSpeaking = true;
-      this.agentSpeakingStart = Date.now();
-      this.interrupted = false;
-      try {
-        await this.streamToTwilio(farewell);
-      } finally {
-        this.agentSpeaking = false;
-      }
-
       if (this.interrupted || this.callEndAborted) {
         if (this.pendingUtterance) {
           const pending = this.pendingUtterance;
@@ -295,7 +286,17 @@ export class CallHandler {
         return;
       }
 
-      for (let i = 0; i < 8; i++) {
+      const signOff = "It was really lovely chatting with you — we'll be in touch. Thank you so much for your time.";
+      this.agentSpeaking = true;
+      this.agentSpeakingStart = Date.now();
+      this.interrupted = false;
+      try {
+        await this.streamToTwilio(signOff);
+      } finally {
+        this.agentSpeaking = false;
+      }
+
+      for (let i = 0; i < 6; i++) {
         await new Promise(r => setTimeout(r, 500));
         if (this.callEndAborted) return;
       }
@@ -305,7 +306,7 @@ export class CallHandler {
       } catch (err) {
         console.error('[call] Failed to end call programmatically:', err);
       }
-    }, 7000);
+    }, 4000);
   }
 
   private handleCallEnd(): void {
