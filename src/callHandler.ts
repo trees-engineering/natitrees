@@ -116,7 +116,7 @@ export class CallHandler {
     const candidateName = this.session?.getCandidateName() ?? 'there';
     const missingFields = this.session?.getMissingFields().map(f => f.label) ?? [];
 
-    const greeting = `Hey ${candidateName}, this is Treelance from Trees OS — just so you know, you're speaking with an AI. This is just a quick, relaxed chat to get to know you a bit better so we can match you to the right opportunities. Is now an okay time?`;
+    const greeting = `Hey ${candidateName}, this is Treelance from Trees OS — just so you know, you're speaking with an AI. This is just a quick, relaxed chat to get to know you a bit better. Is now an okay time?`;
 
     this.agentSpeaking = true;
     this.agentSpeakingStart = Date.now();
@@ -286,17 +286,17 @@ export class CallHandler {
         return;
       }
 
-      const signOff = "It was really lovely chatting with you — we'll be in touch. Thank you so much for your time.";
+      const callEndingSoon = "The call will end shortly.";
       this.agentSpeaking = true;
       this.agentSpeakingStart = Date.now();
       this.interrupted = false;
       try {
-        await this.streamToTwilio(signOff);
+        await this.streamToTwilio(callEndingSoon);
       } finally {
         this.agentSpeaking = false;
       }
 
-      for (let i = 0; i < 6; i++) {
+      for (let i = 0; i < 10; i++) {
         await new Promise(r => setTimeout(r, 500));
         if (this.callEndAborted) return;
       }

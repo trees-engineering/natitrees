@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI, Tool, FunctionDeclaration } from '@google/generative-ai';
+import { GoogleGenerativeAI, Tool, FunctionDeclaration, SchemaType } from '@google/generative-ai';
 import { LLMProvider, ConversationMessage } from '../../llm';
 import { getAvailableSlots, bookSlot } from '../../tools/calendar';
 
@@ -16,10 +16,10 @@ const calendarTools: Tool[] = [
         name: 'get_available_slots',
         description: 'Get available 30-minute slots on the recruiter calendar for a given date',
         parameters: {
-          type: 'OBJECT',
+          type: SchemaType.OBJECT,
           properties: {
             date: {
-              type: 'STRING',
+              type: SchemaType.STRING,
               description: 'Date in YYYY-MM-DD format, e.g. 2026-05-10',
             },
           },
@@ -30,22 +30,22 @@ const calendarTools: Tool[] = [
         name: 'book_slot',
         description: 'Book a follow-up call slot for the candidate with a human recruiter',
         parameters: {
-          type: 'OBJECT',
+          type: SchemaType.OBJECT,
           properties: {
             date: {
-              type: 'STRING',
+              type: SchemaType.STRING,
               description: 'Date in YYYY-MM-DD format',
             },
             time: {
-              type: 'STRING',
+              type: SchemaType.STRING,
               description: 'Time in HH:MM format, e.g. 14:00',
             },
             candidate_name: {
-              type: 'STRING',
+              type: SchemaType.STRING,
               description: 'Full name of the candidate',
             },
             candidate_phone: {
-              type: 'STRING',
+              type: SchemaType.STRING,
               description: 'Phone number of the candidate',
             },
           },

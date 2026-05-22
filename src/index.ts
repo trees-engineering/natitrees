@@ -1,14 +1,20 @@
 import 'dotenv/config';
+import path from 'path';
 import express from 'express';
 import { createServer } from 'http';
 import { WebSocketServer } from 'ws';
 import { CallHandler } from './callHandler';
 import { initiateCall } from './callController';
 import { loadProfile } from './interview/profileLoader';
+import { registerDashboardRoutes } from './dashboardRoutes';
 
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
+
+// Dashboard — served at /dashboard, API at /api/dashboard/*
+registerDashboardRoutes(app);
+app.use('/dashboard', express.static(path.join(__dirname, '../dashboard')));
 
 // Twilio fetches this when the outbound call is answered.
 // It tells Twilio to connect the call audio to our WebSocket.

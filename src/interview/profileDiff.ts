@@ -18,7 +18,7 @@ export const REQUIRED_FIELDS: FieldDefinition[] = [
 export function computeMissingFields(profile: TalentProfile): FieldDefinition[] {
   return REQUIRED_FIELDS.filter(field =>
     field.columns.every(col => {
-      const val = (profile as Record<string, unknown>)[col];
+      const val = (profile as unknown as Record<string, unknown>)[col];
       return val === null || val === undefined || val === '' ||
         (Array.isArray(val) && val.length === 0);
     })
