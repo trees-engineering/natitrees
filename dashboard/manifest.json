@@ -1,0 +1,19 @@
+{
+  "name": "Treelance Voice Agent",
+  "short_name": "Treelance",
+  "description": "AI Voice Agent Dashboard — Treelance / Trees OS",
+  "start_url": "/dashboard/",
+  "scope": "/dashboard/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#eef2f8",
+  "theme_color": "#0b2345",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

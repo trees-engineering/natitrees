@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Treelance — Voice Agent Dashboard</title>
+
+  <!-- PWA -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0b2345">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Treelance">
+  <link rel="apple-touch-icon" href="icon.svg">
+
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- ═══════════════════════════════════ HEADER ════════════════ -->
+<header class="app-header">
+  <div class="header-brand">
+    <div class="brand-icon">
+      <img src="icon.svg" alt="Treelance">
+    </div>
+    <div>
+      <div class="brand-name">Treelance</div>
+    </div>
+    <span class="brand-sub">by Trees OS</span>
+  </div>
+  <div class="status-pill" id="status-pill">
+    <div class="status-dot"></div>
+    <span id="status-text">Checking...</span>
+  </div>
+</header>
+
+<!-- ═══════════════════════════════════ NAV ══════════════════ -->
+<nav class="tab-nav" role="navigation" aria-label="Main navigation">
+  <button class="tab-btn active" data-tab="overview" aria-label="Overview">
+    <span class="tab-icon" aria-hidden="true">⚡</span>
+    <span class="tab-label">Overview</span>
+  </button>
+  <button class="tab-btn" data-tab="analytics" aria-label="Analytics">
+    <span class="tab-icon" aria-hidden="true">📊</span>
+    <span class="tab-label">Analytics</span>
+  </button>
+  <button class="tab-btn" data-tab="psychology" aria-label="Psychology">
+    <span class="tab-icon" aria-hidden="true">🧠</span>
+    <span class="tab-label">Psychology</span>
+  </button>
+  <button class="tab-btn" data-tab="testing" aria-label="Testing">
+    <span class="tab-icon" aria-hidden="true">🧪</span>
+    <span class="tab-label">Testing</span>
+  </button>
+</nav>
+
+<!-- ═══════════════════════════════════ MAIN ═════════════════ -->
+<main class="app-main">
+
+  <!-- ══════════════════════════ OVERVIEW TAB ══════════════════ -->
+  <section id="tab-overview" class="tab-panel active" role="tabpanel">
+    <div class="scroll-area">
+
+      <div class="hero-banner">
+        <div class="hero-badge">
+          <span>●</span> Phase 1 Complete
+        </div>
+        <div class="hero-title">Treelance AI Voice Agent</div>
+        <div class="hero-sub">
+          An outbound AI recruiter that calls candidates, holds a genuine conversation,
+          and builds a rich profile — all without a human in the loop.
+        </div>
+      </div>
+
+      <!-- What it does -->
+      <div class="section-label">What it does</div>
+      <div class="card">
+        <div class="card-title">The Mission</div>
+        <div class="card-desc">
+          Treelance makes outbound calls to candidates in the Trees OS talent network.
+          It acts as a warm, curious AI connector — not a screener. It listens far more
+          than it talks, follows emotional energy, and builds a picture of who the
+          candidate really is, so matching becomes faster and more relevant.
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Identity: Who is Treelance?</div>
+        <div class="card-desc" style="margin-bottom:10px">
+          The agent introduces itself honestly as an AI and represents Trees OS.
+          It holds a warm, unhurried conversation — never scripted, never extractive.
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px">
+          <span style="font-size:12px;padding:4px 10px;border-radius:6px;background:rgba(124,58,237,0.12);border:1px solid rgba(124,58,237,0.2);color:#a855f7">Warm &amp; Curious</span>
+          <span style="font-size:12px;padding:4px 10px;border-radius:6px;background:rgba(124,58,237,0.12);border:1px solid rgba(124,58,237,0.2);color:#a855f7">Honest about being AI</span>
+          <span style="font-size:12px;padding:4px 10px;border-radius:6px;background:rgba(124,58,237,0.12);border:1px solid rgba(124,58,237,0.2);color:#a855f7">Speaks 20% — Listens 80%</span>
+          <span style="font-size:12px;padding:4px 10px;border-radius:6px;background:rgba(124,58,237,0.12);border:1px solid rgba(124,58,237,0.2);color:#a855f7">Multilingual</span>
+          <span style="font-size:12px;padding:4px 10px;border-radius:6px;background:rgba(124,58,237,0.12);border:1px solid rgba(124,58,237,0.2);color:#a855f7">Barge-in support</span>
+        </div>
+      </div>
+
+      <!-- Call Flow -->
+      <div class="section-label" style="margin-top:20px">Call Flow</div>
+      <div class="card">
+        <div class="pipeline">
+          <div class="pipeline-step">
+            <span class="pipeline-step-num">01</span>
+            <div class="pipeline-step-content">
+              <div class="pipeline-step-title">Trigger</div>
+              <div class="pipeline-step-desc">POST /call with a talentId. Candidate profile is loaded from Supabase. Twilio places the outbound call.</div>
+            </div>
+          </div>
+          <div class="pipeline-step">
+            <span class="pipeline-step-num">02</span>
+            <div class="pipeline-step-content">
+              <div class="pipeline-step-title">Answer &amp; Greet</div>
+              <div class="pipeline-step-desc">When the candidate picks up, the agent greets them by name, discloses it's an AI, and checks if now is a good time.</div>
+            </div>
+          </div>
+          <div class="pipeline-step">
+            <span class="pipeline-step-num">03</span>
+            <div class="pipeline-step-content">
+              <div class="pipeline-step-title">Live Conversation Loop</div>
+              <div class="pipeline-step-desc">Candidate speech → Deepgram STT → Gemini LLM → ElevenLabs TTS → back to Twilio. Runs in real-time with barge-in support.</div>
+            </div>
+          </div>
+          <div class="pipeline-step">
+            <span class="pipeline-step-num">04</span>
+            <div class="pipeline-step-content">
+              <div class="pipeline-step-title">Tool Calls (Phase 2)</div>
+              <div class="pipeline-step-desc">During the call, Gemini can invoke tools — check availability, book calendar slots with human recruiters.</div>
+            </div>
+          </div>
+          <div class="pipeline-step">
+            <span class="pipeline-step-num">05</span>
+            <div class="pipeline-step-content">
+              <div class="pipeline-step-title">Natural Close</div>
+              <div class="pipeline-step-desc">When the conversation reaches a natural end, the agent closes warmly and appends [END_CALL] to trigger hang-up.</div>
+            </div>
+          </div>
+          <div class="pipeline-step">
+            <span class="pipeline-step-num">06</span>
+            <div class="pipeline-step-content">
+              <div class="pipeline-step-title">Save &amp; Process</div>
+              <div class="pipeline-step-desc">Full transcript and AI summary are saved to Supabase _assessments table for recruiter review.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tech Stack -->
+      <div class="section-label" style="margin-top:20px">Tech Stack</div>
+      <div class="card">
+        <table class="tech-table">
+          <tbody>
+            <tr><td>Language</td><td>TypeScript (Node.js) <span class="tech-badge badge-done">Done</span></td></tr>
+            <tr><td>Telephony</td><td>Twilio (outbound) <span class="tech-badge badge-done">Done</span></td></tr>
+            <tr><td>STT</td><td>Deepgram Nova-2 <span class="tech-badge badge-done">Done</span></td></tr>
+            <tr><td>LLM</td><td>Gemini 2.5 Flash <span class="tech-badge badge-done">Done</span></td></tr>
+            <tr><td>TTS</td><td>ElevenLabs Turbo v2.5 <span class="tech-badge badge-done">Done</span></td></tr>
+            <tr><td>Database</td><td>Supabase (PostgreSQL) <span class="tech-badge badge-done">Done</span></td></tr>
+            <tr><td>Calendar</td><td>Google Calendar API <span class="tech-badge badge-done">Done</span></td></tr>
+            <tr><td>Session Memory</td><td>Redis <span class="tech-badge badge-next">Phase 3</span></td></tr>
+            <tr><td>Post-processing</td><td>Gemini batch pipeline <span class="tech-badge badge-next">Phase 4</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Provider info (live) -->
+      <div class="section-label" style="margin-top:20px">Live Configuration</div>
+      <div class="card" id="config-card">
+        <div class="card-desc text-muted">Loading provider config…</div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ══════════════════════════ ANALYTICS TAB ═════════════════ -->
+  <section id="tab-analytics" class="tab-panel" role="tabpanel">
+    <div class="scroll-area">
+
+      <div class="section-label">Summary</div>
+      <div class="stat-grid">
+        <div class="stat-card purple">
+          <div class="stat-label">Total Calls</div>
+          <div class="stat-value" id="stat-calls">—</div>
+          <div class="stat-sub">assessments on record</div>
+        </div>
+        <div class="stat-card green">
+          <div class="stat-label">Candidates</div>
+          <div class="stat-value" id="stat-talents">—</div>
+          <div class="stat-sub">in talent pool</div>
+        </div>
+        <div class="stat-card amber">
+          <div class="stat-label">Sim Runs</div>
+          <div class="stat-value" id="stat-sims">0</div>
+          <div class="stat-sub">this session</div>
+        </div>
+        <div class="stat-card blue">
+          <div class="stat-label">Server</div>
+          <div class="stat-value" id="stat-uptime">—</div>
+          <div class="stat-sub">status</div>
+        </div>
+      </div>
+
+      <div class="section-label">System Configuration</div>
+      <div class="card" id="analytics-config">
+        <div class="card-desc text-muted">Loading…</div>
+      </div>
+
+      <div class="section-label" style="margin-top:20px">Call History</div>
+      <div class="card" id="assessments-card">
+        <div class="empty-state">
+          <div class="empty-icon">📋</div>
+          <div class="empty-msg">Loading call history…</div>
+        </div>
+      </div>
+
+      <div class="section-label" style="margin-top:20px">Talent Pool</div>
+      <div class="card" id="talents-card">
+        <div class="empty-state">
+          <div class="empty-icon">👤</div>
+          <div class="empty-msg">Loading talent pool…</div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ══════════════════════════ PSYCHOLOGY TAB ════════════════ -->
+  <section id="tab-psychology" class="tab-panel" role="tabpanel">
+    <div class="scroll-area">
+
+      <div class="section-label">Behavioural Design</div>
+      <div class="section-title">The Psychology Behind Treelance</div>
+      <div class="section-desc">
+        Every response the agent gives is shaped by evidence-based conversational psychology.
+        These are the invisible tools built into Treelance's system prompt — the techniques
+        that make candidates feel genuinely heard and comfortable sharing more than they planned.
+      </div>
+
+      <div class="psych-grid" id="psych-grid">
+        <!-- rendered by app.js -->
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ══════════════════════════ TESTING TAB ═══════════════════ -->
+  <section id="tab-testing" class="tab-panel" role="tabpanel">
+    <div class="scroll-area">
+
+      <div class="section-label">Simulation Lab</div>
+      <div class="section-title">Test the Agent</div>
+      <div class="section-desc">
+        Run LLM-only simulations against pre-built candidate personas or a custom scenario.
+        Each simulation scores the agent on coverage, violations, and conversation quality.
+        No phone call required — the LLM plays both sides.
+      </div>
+
+      <!-- Sub-tabs: built-in / custom -->
+      <div class="sub-tabs">
+        <button class="sub-tab active" data-subtab="builtin">Built-in Scenarios</button>
+        <button class="sub-tab" data-subtab="custom">Custom Scenario</button>
+      </div>
+
+      <!-- Built-in panel -->
+      <div id="subtab-builtin">
+        <div class="field-group">
+          <div class="field-label">Select a scenario</div>
+          <div class="scenario-select-wrap">
+            <select id="scenario-select">
+              <option value="">— choose a scenario —</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="scenario-meta" id="scenario-meta">
+          <div class="scenario-meta-type" id="scenario-meta-type"></div>
+          <div class="profile-tags" id="scenario-meta-tags"></div>
+        </div>
+      </div>
+
+      <!-- Custom panel -->
+      <div id="subtab-custom" style="display:none">
+        <div class="custom-fields">
+          <div class="field-group">
+            <div class="field-label">Candidate Name</div>
+            <input class="field-input" id="custom-name" type="text" placeholder="e.g. Jordan" maxlength="50">
+          </div>
+          <div class="field-group">
+            <div class="field-label">Candidate Type / Personality</div>
+            <input class="field-input" id="custom-type" type="text" placeholder="e.g. Senior engineer, direct and time-poor" maxlength="100">
+          </div>
+          <div class="field-group">
+            <div class="field-label">Profile Context (optional)</div>
+            <input class="field-input" id="custom-headline" type="text" placeholder="Headline, e.g. Mechanical Engineer — 10 years" maxlength="120">
+            <div class="spacer-sm"></div>
+            <input class="field-input" id="custom-rate" type="text" placeholder="Rate, e.g. 500 (per day)" maxlength="60">
+            <div class="spacer-sm"></div>
+            <input class="field-input" id="custom-avail" type="text" placeholder="Availability, e.g. Available now" maxlength="60">
+          </div>
+          <div class="field-group">
+            <div class="field-label">Candidate Messages (one per line)</div>
+            <textarea class="field-input field-textarea" id="custom-messages"
+              placeholder="Yeah now's good, I've got a bit of time.&#10;Pretty good actually.&#10;Civil engineering, about six years now.&#10;Just looking for a change really.&#10;Yeah that's about it, thanks."
+            ></textarea>
+            <div class="field-hint">Each line is one candidate turn. The agent responds after each.</div>
+          </div>
+        </div>
+      </div>
+
+      <button class="run-btn" id="run-btn" disabled>
+        <span id="run-btn-text">Select a scenario to run</span>
+      </button>
+
+      <!-- Output -->
+      <div class="sim-output" id="sim-output">
+        <div class="sim-header">
+          <div class="sim-title" id="sim-title"></div>
+          <div class="sim-status running" id="sim-status">Running…</div>
+        </div>
+        <div class="transcript" id="transcript"></div>
+        <div id="scorecard-wrap"></div>
+      </div>
+
+    </div>
+  </section>
+
+</main>
+
+<script src="app.js"></script>
+</body>
+</html>
