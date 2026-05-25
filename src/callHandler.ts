@@ -1,8 +1,9 @@
 import WebSocket from 'ws';
 import { createSTT, STTProvider } from './stt';
-import { createLLM, LLMProvider } from './llm';
+import { createLLM, getMYTDateTime, LLMProvider } from './llm';
 import { createTTS, TTSProvider } from './tts';
 import { getCallMeta, removeCall } from './callStore';
+import { registerHandler, removeHandler } from './activeCallRegistry';
 import { endCall } from './callController';
 import { SessionStore } from './interview/sessionStore';
 
@@ -65,6 +66,7 @@ export class CallHandler {
     if (msg.event === 'start') {
       this.streamSid = msg.start.streamSid;
       this.callSid = msg.start.callSid;
+      registerHandler(this.callSid, this);
       console.log(`[call] Stream started — SID: ${this.streamSid}`);
       const meta = getCallMeta(this.callSid);
       if (meta) {
@@ -94,7 +96,7 @@ export class CallHandler {
       console.log('[barge-in] Skipped — cooldown active');
       return;
     }
-    if (now - this.agentSpeakingStart < 1000) {
+    if (now - this.agentSpeakingStart < 200) {
       console.log('[barge-in] Skipped — agent just started speaking');
       return;
     }
@@ -114,7 +116,6 @@ export class CallHandler {
   private async agentSpeakFirst(): Promise<void> {
     await this.sessionReady;
     const candidateName = this.session?.getCandidateName() ?? 'there';
-    const missingFields = this.session?.getMissingFields().map(f => f.label) ?? [];
 
     const greeting = `Hey ${candidateName}, this is Treelance from Trees OS — just so you know, you're speaking with an AI. This is just a quick, relaxed chat to get to know you a bit better. Is now an okay time?`;
 
@@ -127,9 +128,9 @@ export class CallHandler {
         await this.streamToTwilio(sentence.trim());
       }
 
-      const profileContext = this.session?.getProfileContext() ?? {};
-      console.log(`[llm] Building prompt for ${candidateName} — missing: ${missingFields.join(', ') || 'none'}`);
-      this.llm = createLLM(missingFields, candidateName, profileContext);
+      const profileData = this.session?.getProfileContext() ?? {};
+      console.log(`[llm] Building prompt for ${candidateName}`);
+      this.llm = createLLM(candidateName, profileData, getMYTDateTime());
       this.llm.addMessage('assistant', greeting);
     } finally {
       this.agentSpeaking = false;
@@ -309,6 +310,10 @@ export class CallHandler {
     }, 4000);
   }
 
+  getTranscript(): Array<{ role: string; content: string }> {
+    return this.llm?.getHistory() ?? [];
+  }
+
   private handleCallEnd(): void {
     if (this.callEnded) return;
     this.callEnded = true;
@@ -316,6 +321,7 @@ export class CallHandler {
     const history = this.llm?.getHistory() ?? [];
     history.forEach((m) => console.log(`  [${m.role}] ${m.content}`));
     this.stt.close();
+    removeHandler(this.callSid);
     if (this.session) {
       void this.session.save(history);
       removeCall(this.callSid);

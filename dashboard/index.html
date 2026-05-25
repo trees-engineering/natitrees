@@ -44,13 +44,25 @@
     <span class="tab-icon" aria-hidden="true">📊</span>
     <span class="tab-label">Analytics</span>
   </button>
+  <button class="tab-btn" data-tab="transcripts" aria-label="Transcripts">
+    <span class="tab-icon" aria-hidden="true">📋</span>
+    <span class="tab-label">Transcripts</span>
+  </button>
   <button class="tab-btn" data-tab="psychology" aria-label="Psychology">
     <span class="tab-icon" aria-hidden="true">🧠</span>
     <span class="tab-label">Psychology</span>
   </button>
+  <button class="tab-btn" data-tab="calls" aria-label="Calls">
+    <span class="tab-icon" aria-hidden="true">📞</span>
+    <span class="tab-label">Calls</span>
+  </button>
   <button class="tab-btn" data-tab="testing" aria-label="Testing">
     <span class="tab-icon" aria-hidden="true">🧪</span>
     <span class="tab-label">Testing</span>
+  </button>
+  <button class="tab-btn" data-tab="prompt" aria-label="Prompt">
+    <span class="tab-icon" aria-hidden="true">✏️</span>
+    <span class="tab-label">Prompt</span>
   </button>
 </nav>
 
@@ -61,19 +73,71 @@
   <section id="tab-overview" class="tab-panel active" role="tabpanel">
     <div class="scroll-area">
 
+      <!-- Hero -->
       <div class="hero-banner">
-        <div class="hero-badge">
-          <span>●</span> Phase 1 Complete
-        </div>
         <div class="hero-title">Treelance AI Voice Agent</div>
         <div class="hero-sub">
           An outbound AI recruiter that calls candidates, holds a genuine conversation,
           and builds a rich profile — all without a human in the loop.
         </div>
+        <div class="hero-kpis">
+          <div class="hero-kpi">
+            <div class="hero-kpi-val" id="ov-calls">—</div>
+            <div class="hero-kpi-lbl">Total Calls</div>
+          </div>
+          <div class="hero-kpi-sep"></div>
+          <div class="hero-kpi">
+            <div class="hero-kpi-val" id="ov-talent">—</div>
+            <div class="hero-kpi-lbl">Candidates</div>
+          </div>
+          <div class="hero-kpi-sep"></div>
+          <div class="hero-kpi">
+            <div class="hero-kpi-val" id="ov-server">—</div>
+            <div class="hero-kpi-lbl">Server</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Actions -->
+      <div class="section-label">Quick Actions</div>
+      <div class="quick-actions">
+        <button class="action-btn action-primary" onclick="switchTab('testing')">
+          <span class="action-icon">🧪</span>
+          <div class="action-text">
+            <div class="action-title">Run Simulation</div>
+            <div class="action-sub">Test agent against a persona</div>
+          </div>
+        </button>
+        <button class="action-btn" onclick="switchTab('analytics')">
+          <span class="action-icon">📊</span>
+          <div class="action-text">
+            <div class="action-title">View Analytics</div>
+            <div class="action-sub">Call history &amp; talent pool</div>
+          </div>
+        </button>
+        <button class="action-btn" onclick="switchTab('psychology')">
+          <span class="action-icon">🧠</span>
+          <div class="action-text">
+            <div class="action-title">Psychology Playbook</div>
+            <div class="action-sub">Behavioural techniques</div>
+          </div>
+        </button>
+      </div>
+
+      <!-- System Health -->
+      <div class="section-label" style="margin-top:20px">System Health</div>
+      <div class="card" id="health-card">
+        <div class="card-desc text-muted">Checking services…</div>
+      </div>
+
+      <!-- Recent Activity -->
+      <div class="section-label" style="margin-top:20px">Recent Activity</div>
+      <div class="card" id="recent-card">
+        <div class="card-desc text-muted">Loading…</div>
       </div>
 
       <!-- What it does -->
-      <div class="section-label">What it does</div>
+      <div class="section-label" style="margin-top:20px">What it does</div>
       <div class="card">
         <div class="card-title">The Mission</div>
         <div class="card-desc">
@@ -91,60 +155,11 @@
           It holds a warm, unhurried conversation — never scripted, never extractive.
         </div>
         <div style="display:flex;flex-wrap:wrap;gap:6px">
-          <span style="font-size:12px;padding:4px 10px;border-radius:6px;background:rgba(124,58,237,0.12);border:1px solid rgba(124,58,237,0.2);color:#a855f7">Warm &amp; Curious</span>
-          <span style="font-size:12px;padding:4px 10px;border-radius:6px;background:rgba(124,58,237,0.12);border:1px solid rgba(124,58,237,0.2);color:#a855f7">Honest about being AI</span>
-          <span style="font-size:12px;padding:4px 10px;border-radius:6px;background:rgba(124,58,237,0.12);border:1px solid rgba(124,58,237,0.2);color:#a855f7">Speaks 20% — Listens 80%</span>
-          <span style="font-size:12px;padding:4px 10px;border-radius:6px;background:rgba(124,58,237,0.12);border:1px solid rgba(124,58,237,0.2);color:#a855f7">Multilingual</span>
-          <span style="font-size:12px;padding:4px 10px;border-radius:6px;background:rgba(124,58,237,0.12);border:1px solid rgba(124,58,237,0.2);color:#a855f7">Barge-in support</span>
-        </div>
-      </div>
-
-      <!-- Call Flow -->
-      <div class="section-label" style="margin-top:20px">Call Flow</div>
-      <div class="card">
-        <div class="pipeline">
-          <div class="pipeline-step">
-            <span class="pipeline-step-num">01</span>
-            <div class="pipeline-step-content">
-              <div class="pipeline-step-title">Trigger</div>
-              <div class="pipeline-step-desc">POST /call with a talentId. Candidate profile is loaded from Supabase. Twilio places the outbound call.</div>
-            </div>
-          </div>
-          <div class="pipeline-step">
-            <span class="pipeline-step-num">02</span>
-            <div class="pipeline-step-content">
-              <div class="pipeline-step-title">Answer &amp; Greet</div>
-              <div class="pipeline-step-desc">When the candidate picks up, the agent greets them by name, discloses it's an AI, and checks if now is a good time.</div>
-            </div>
-          </div>
-          <div class="pipeline-step">
-            <span class="pipeline-step-num">03</span>
-            <div class="pipeline-step-content">
-              <div class="pipeline-step-title">Live Conversation Loop</div>
-              <div class="pipeline-step-desc">Candidate speech → Deepgram STT → Gemini LLM → ElevenLabs TTS → back to Twilio. Runs in real-time with barge-in support.</div>
-            </div>
-          </div>
-          <div class="pipeline-step">
-            <span class="pipeline-step-num">04</span>
-            <div class="pipeline-step-content">
-              <div class="pipeline-step-title">Tool Calls (Phase 2)</div>
-              <div class="pipeline-step-desc">During the call, Gemini can invoke tools — check availability, book calendar slots with human recruiters.</div>
-            </div>
-          </div>
-          <div class="pipeline-step">
-            <span class="pipeline-step-num">05</span>
-            <div class="pipeline-step-content">
-              <div class="pipeline-step-title">Natural Close</div>
-              <div class="pipeline-step-desc">When the conversation reaches a natural end, the agent closes warmly and appends [END_CALL] to trigger hang-up.</div>
-            </div>
-          </div>
-          <div class="pipeline-step">
-            <span class="pipeline-step-num">06</span>
-            <div class="pipeline-step-content">
-              <div class="pipeline-step-title">Save &amp; Process</div>
-              <div class="pipeline-step-desc">Full transcript and AI summary are saved to Supabase _assessments table for recruiter review.</div>
-            </div>
-          </div>
+          <span class="identity-chip">Warm &amp; Curious</span>
+          <span class="identity-chip">Honest about being AI</span>
+          <span class="identity-chip">Speaks 20% — Listens 80%</span>
+          <span class="identity-chip">Multilingual</span>
+          <span class="identity-chip">Barge-in support</span>
         </div>
       </div>
 
@@ -153,20 +168,20 @@
       <div class="card">
         <table class="tech-table">
           <tbody>
-            <tr><td>Language</td><td>TypeScript (Node.js) <span class="tech-badge badge-done">Done</span></td></tr>
-            <tr><td>Telephony</td><td>Twilio (outbound) <span class="tech-badge badge-done">Done</span></td></tr>
-            <tr><td>STT</td><td>Deepgram Nova-2 <span class="tech-badge badge-done">Done</span></td></tr>
-            <tr><td>LLM</td><td>Gemini 2.5 Flash <span class="tech-badge badge-done">Done</span></td></tr>
-            <tr><td>TTS</td><td>ElevenLabs Turbo v2.5 <span class="tech-badge badge-done">Done</span></td></tr>
-            <tr><td>Database</td><td>Supabase (PostgreSQL) <span class="tech-badge badge-done">Done</span></td></tr>
-            <tr><td>Calendar</td><td>Google Calendar API <span class="tech-badge badge-done">Done</span></td></tr>
-            <tr><td>Session Memory</td><td>Redis <span class="tech-badge badge-next">Phase 3</span></td></tr>
-            <tr><td>Post-processing</td><td>Gemini batch pipeline <span class="tech-badge badge-next">Phase 4</span></td></tr>
+            <tr><td>Language</td><td>TypeScript (Node.js)</td></tr>
+            <tr><td>Telephony</td><td>Twilio — outbound calls</td></tr>
+            <tr><td>STT</td><td>Deepgram Nova-2</td></tr>
+            <tr><td>LLM</td><td>Gemini 2.5 Flash</td></tr>
+            <tr><td>TTS</td><td>Cartesia</td></tr>
+            <tr><td>Database</td><td>Supabase (PostgreSQL)</td></tr>
+            <tr><td>Calendar</td><td>Google Calendar API</td></tr>
+            <tr><td>Session Memory</td><td>Redis</td></tr>
+            <tr><td>Post-processing</td><td>Gemini batch pipeline</td></tr>
           </tbody>
         </table>
       </div>
 
-      <!-- Provider info (live) -->
+      <!-- Live Configuration -->
       <div class="section-label" style="margin-top:20px">Live Configuration</div>
       <div class="card" id="config-card">
         <div class="card-desc text-muted">Loading provider config…</div>
@@ -179,18 +194,42 @@
   <section id="tab-analytics" class="tab-panel" role="tabpanel">
     <div class="scroll-area">
 
-      <div class="section-label">Summary</div>
+      <div class="section-label">Call Volume</div>
+      <div class="kpi-grid">
+        <div class="kpi-card">
+          <div class="kpi-label">Total Calls</div>
+          <div class="kpi-value" id="kpi-total">—</div>
+          <div class="kpi-sub">all time</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">This Week</div>
+          <div class="kpi-value" id="kpi-week">—</div>
+          <div class="kpi-sub">Mon – today</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Last Week</div>
+          <div class="kpi-value" id="kpi-lastweek">—</div>
+          <div class="kpi-sub">previous week</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Trend</div>
+          <div class="kpi-value" id="kpi-trend">—</div>
+          <div class="kpi-sub">week over week</div>
+        </div>
+      </div>
+
+      <div class="section-label" style="margin-top:20px">Daily Activity — last 14 days</div>
+      <div class="card" id="kpi-chart-card">
+        <div id="kpi-chart" class="kpi-chart"></div>
+      </div>
+
+      <div class="section-label" style="margin-top:20px">Channel Breakdown</div>
+      <div class="card" id="kpi-channels">
+        <div class="card-desc text-muted">Loading…</div>
+      </div>
+
+      <div class="section-label" style="margin-top:20px">Summary</div>
       <div class="stat-grid">
-        <div class="stat-card purple">
-          <div class="stat-label">Total Calls</div>
-          <div class="stat-value" id="stat-calls">—</div>
-          <div class="stat-sub">assessments on record</div>
-        </div>
-        <div class="stat-card green">
-          <div class="stat-label">Candidates</div>
-          <div class="stat-value" id="stat-talents">—</div>
-          <div class="stat-sub">in talent pool</div>
-        </div>
         <div class="stat-card amber">
           <div class="stat-label">Sim Runs</div>
           <div class="stat-value" id="stat-sims">0</div>
@@ -203,24 +242,28 @@
         </div>
       </div>
 
-      <div class="section-label">System Configuration</div>
+      <div class="section-label" style="margin-top:20px">System Configuration</div>
       <div class="card" id="analytics-config">
         <div class="card-desc text-muted">Loading…</div>
       </div>
 
-      <div class="section-label" style="margin-top:20px">Call History</div>
-      <div class="card" id="assessments-card">
-        <div class="empty-state">
-          <div class="empty-icon">📋</div>
-          <div class="empty-msg">Loading call history…</div>
-        </div>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════ TRANSCRIPTS TAB ══════════════ -->
+  <section id="tab-transcripts" class="tab-panel" role="tabpanel">
+    <div class="scroll-area">
+
+      <div class="section-label">Call History</div>
+      <div class="section-title">Transcripts</div>
+      <div class="section-desc">
+        Every completed call with its full transcript and AI summary. Click any row to expand.
       </div>
 
-      <div class="section-label" style="margin-top:20px">Talent Pool</div>
-      <div class="card" id="talents-card">
+      <div id="transcripts-list">
         <div class="empty-state">
-          <div class="empty-icon">👤</div>
-          <div class="empty-msg">Loading talent pool…</div>
+          <div class="empty-icon">📋</div>
+          <div class="empty-msg">Loading transcripts…</div>
         </div>
       </div>
 
@@ -245,6 +288,102 @@
 
     </div>
   </section>
+
+  <!-- ══════════════════════════ CALLS TAB ════════════════════ -->
+  <section id="tab-calls" class="tab-panel" role="tabpanel">
+    <div class="scroll-area">
+
+      <div class="section-label">Outbound Calls</div>
+      <div class="section-title">Calls</div>
+      <div class="section-desc">
+        Call a candidate from the database or make a manual call to any number for testing.
+      </div>
+
+      <!-- Manual Call -->
+      <div class="section-label">Manual Call</div>
+      <div class="card" style="margin-bottom:20px">
+        <div class="card-title">Call Any Number</div>
+        <div class="card-desc" style="margin-bottom:14px">For testing — enter a name and phone number directly.</div>
+        <div class="custom-fields">
+          <div class="field-group">
+            <div class="field-label">Name</div>
+            <input class="field-input" id="manual-name" type="text" placeholder="e.g. John Smith" maxlength="80">
+          </div>
+          <div class="field-group">
+            <div class="field-label">Phone Number</div>
+            <input class="field-input" id="manual-phone" type="tel" placeholder="e.g. +601234567890" maxlength="20">
+          </div>
+        </div>
+        <button class="call-btn" id="manual-call-btn" disabled>
+          📞 Call
+        </button>
+      </div>
+
+      <!-- Candidate Dropdown -->
+      <div class="section-label">Candidates</div>
+      <div class="card" id="candidates-card">
+        <div class="card-title">Call from Database</div>
+        <div class="card-desc" style="margin-bottom:14px">Select a candidate from your talent pool.</div>
+        <div class="field-group">
+          <div class="field-label">Search</div>
+          <input class="field-input" id="candidates-search" type="text" placeholder="Search by name or phone number…" autocomplete="off">
+        </div>
+        <div class="field-group" style="margin-top:10px">
+          <div class="field-label">Select Candidate <span class="candidate-count" id="candidate-count"></span></div>
+          <div class="scenario-select-wrap">
+            <select id="candidate-select">
+              <option value="">— loading candidates… —</option>
+            </select>
+          </div>
+        </div>
+        <div class="candidate-detail" id="candidate-detail"></div>
+        <button class="call-btn" id="db-call-btn" disabled>
+          📞 Call
+        </button>
+      </div>
+
+      <!-- Call History -->
+      <div class="section-label" style="margin-top:20px">Call History</div>
+      <div class="card history-toggle-card">
+        <button class="history-toggle-btn" id="history-toggle-btn" aria-expanded="false">
+          <div class="history-toggle-left">
+            <span class="history-toggle-icon">📋</span>
+            <span class="history-toggle-label">Call History</span>
+            <span class="history-badge" id="history-badge"></span>
+          </div>
+          <span class="history-chevron" id="history-chevron">▾</span>
+        </button>
+        <div class="history-panel" id="history-panel">
+          <div class="history-filters">
+            <span class="history-filter-label">Filter by</span>
+            <div class="history-filter-pills">
+              <button class="filter-pill active" data-period="all">All</button>
+              <button class="filter-pill" data-period="today">Today</button>
+              <button class="filter-pill" data-period="week">This Week</button>
+              <button class="filter-pill" data-period="month">This Month</button>
+            </div>
+          </div>
+          <div class="history-list" id="history-list"></div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- Call Confirmation Modal -->
+  <div class="call-modal-overlay" id="call-modal-overlay">
+    <div class="call-modal">
+      <div class="call-modal-title">Confirm Call</div>
+      <div class="call-modal-body">
+        <div class="call-modal-name" id="modal-name"></div>
+        <div class="call-modal-phone" id="modal-phone"></div>
+      </div>
+      <div class="call-modal-actions">
+        <button class="call-modal-cancel" id="modal-cancel-btn">Cancel</button>
+        <button class="call-modal-proceed" id="modal-proceed-btn">Proceed</button>
+      </div>
+    </div>
+  </div>
 
   <!-- ══════════════════════════ TESTING TAB ═══════════════════ -->
   <section id="tab-testing" class="tab-panel" role="tabpanel">
@@ -278,6 +417,7 @@
         <div class="scenario-meta" id="scenario-meta">
           <div class="scenario-meta-type" id="scenario-meta-type"></div>
           <div class="profile-tags" id="scenario-meta-tags"></div>
+          <button class="delete-scenario-btn" id="scenario-delete-btn" style="display:none">Remove from list</button>
         </div>
       </div>
 
@@ -285,7 +425,7 @@
       <div id="subtab-custom" style="display:none">
         <div class="custom-fields">
           <div class="field-group">
-            <div class="field-label">Candidate Name</div>
+            <div class="field-label">Candidate Name <span class="field-required">*</span></div>
             <input class="field-input" id="custom-name" type="text" placeholder="e.g. Jordan" maxlength="50">
           </div>
           <div class="field-group">
@@ -301,12 +441,18 @@
             <input class="field-input" id="custom-avail" type="text" placeholder="Availability, e.g. Available now" maxlength="60">
           </div>
           <div class="field-group">
-            <div class="field-label">Candidate Messages (one per line)</div>
+            <div class="field-label">Candidate Messages (one per line) <span class="field-required">*</span></div>
             <textarea class="field-input field-textarea" id="custom-messages"
               placeholder="Yeah now's good, I've got a bit of time.&#10;Pretty good actually.&#10;Civil engineering, about six years now.&#10;Just looking for a change really.&#10;Yeah that's about it, thanks."
             ></textarea>
             <div class="field-hint">Each line is one candidate turn. The agent responds after each.</div>
           </div>
+        </div>
+
+        <div class="save-scenario-row">
+          <input class="field-input save-scenario-title-input" id="custom-title" type="text"
+            placeholder="Scenario title to save (e.g. Senior PM, guarded)" maxlength="60">
+          <button class="save-scenario-btn" id="save-scenario-btn" disabled>Save to Built-in List</button>
         </div>
       </div>
 
@@ -327,7 +473,79 @@
     </div>
   </section>
 
+  <!-- ══════════════════════════ PROMPT TAB ════════════════════ -->
+  <section id="tab-prompt" class="tab-panel" role="tabpanel">
+    <div class="scroll-area">
+
+      <div class="section-label">Prompt Editor</div>
+      <div class="section-title">System Prompt</div>
+      <div class="section-desc">
+        Edit the prompt that drives every call. Changes are saved instantly and used on the next call — no code editing needed.
+      </div>
+
+      <!-- Master Prompt -->
+      <div class="prompt-block-header">
+        <div>
+          <div class="prompt-block-title">Master Prompt</div>
+          <div class="prompt-block-desc">The full core instructions sent to the AI on every call. Use <code>{{DATE_TIME}}</code> as a placeholder — it gets replaced with the live Malaysia time automatically.</div>
+        </div>
+        <span class="prompt-custom-badge" id="master-badge">Custom</span>
+      </div>
+      <div class="card prompt-card">
+        <textarea class="prompt-textarea" id="master-textarea" spellcheck="false" placeholder="Loading…"></textarea>
+        <div class="prompt-actions">
+          <button class="prompt-btn-ghost" id="master-reset-btn">Reset to default</button>
+          <button class="prompt-btn-save" id="master-save-btn">Save changes</button>
+        </div>
+      </div>
+
+      <!-- Secondary Prompt -->
+      <div class="prompt-block-header" style="margin-top:24px">
+        <div>
+          <div class="prompt-block-title">Secondary Prompt</div>
+          <div class="prompt-block-desc">Extra instructions appended after the master. Use this to quickly tweak behaviour or experiment — without touching the master.</div>
+        </div>
+      </div>
+      <div class="card prompt-card" style="margin-bottom:0">
+        <textarea class="prompt-textarea prompt-textarea-sm" id="secondary-textarea" spellcheck="false" placeholder="e.g. Always acknowledge when the candidate mentions a city name.&#10;&#10;Leave empty to use the master prompt only."></textarea>
+        <div class="prompt-actions">
+          <button class="prompt-btn-ghost" id="secondary-clear-btn">Clear</button>
+          <button class="prompt-btn-save" id="secondary-save-btn">Save changes</button>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
 </main>
+
+<div id="prompt-toast" class="prompt-toast"></div>
+
+<!-- Active Call Banner -->
+<div class="active-call-banner" id="active-call-banner">
+  <div class="active-call-dot"></div>
+  <div class="active-call-info">
+    <span class="active-call-label">Live Call</span>
+    <span class="active-call-name" id="active-call-name"></span>
+  </div>
+  <div class="active-call-actions">
+    <button class="active-call-transcript-btn" id="active-transcript-btn">View Transcript</button>
+    <button class="active-call-end-btn" id="active-end-btn">End Call</button>
+  </div>
+</div>
+
+<!-- Transcript Modal -->
+<div class="call-modal-overlay" id="transcript-modal-overlay">
+  <div class="call-modal transcript-modal">
+    <div class="transcript-modal-header">
+      <div class="call-modal-title" id="transcript-modal-title">Live Transcript</div>
+      <button class="transcript-close-btn" id="transcript-close-btn">✕</button>
+    </div>
+    <div class="transcript-modal-body" id="transcript-modal-body">
+      <div class="empty-state"><div class="empty-msg">Waiting for conversation…</div></div>
+    </div>
+  </div>
+</div>
 
 <script src="app.js"></script>
 </body>

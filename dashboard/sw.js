@@ -31,12 +31,12 @@ self.addEventListener('fetch', e => {
     return;
   }
 
-  // Cache-first for static assets
+  // Network-first for static assets — always fetch fresh, fall back to cache
   e.respondWith(
-    caches.match(e.request).then(r => r || fetch(e.request).then(res => {
+    fetch(e.request).then(res => {
       const clone = res.clone();
       caches.open(CACHE).then(c => c.put(e.request, clone));
       return res;
-    }))
+    }).catch(() => caches.match(e.request))
   );
 });

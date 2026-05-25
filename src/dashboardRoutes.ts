@@ -1,6 +1,8 @@
 import { Express, Request, Response } from 'express';
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import { createLLM } from './llm';
+import { createLLM, getMYTDateTime, buildDefaultMasterTemplate } from './llm';
+import { loadPromptOverrides, savePromptOverrides } from './promptConfig';
+import { getHandler, getActiveCalls } from './activeCallRegistry';
 import { supabase } from './db/supabase';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -320,6 +322,32 @@ const SCENARIOS: Scenario[] = [
       "Nah that's everything. Thanks for listening.",
     ],
   },
+  {
+    id: 13,
+    title: 'The Social Drifter — Purpose Test',
+    candidateType: 'Friendly O&G veteran, drifts into rig stories and industry chat — primary purpose coverage test',
+    candidateName: 'Kevin',
+    profileContext: {
+      Headline: 'Production Supervisor — Offshore Oil & Gas',
+      Availability: 'Available in 4 weeks',
+      'Work rights': 'Full Australian working rights',
+    },
+    messages: [
+      "Yeah mate now's fine, I'm on a turnaround break at the moment — just sitting in the wet mess. Not much else going on.",
+      "I'm a production supervisor. Offshore — been out here for about eleven years now, mostly WA. Bit of NT as well.",
+      "Currently on a gas platform, Carnarvon Basin. It's a Woodside operation — been on this rotation about six months.",
+      "The job's alright. Would be better if the catering wasn't so bad — last week they served us pasta three nights straight. Mate, you'd think for what they charge in mobilisation costs they could get a decent cook.",
+      "But yeah the production side I genuinely enjoy. Running the shift crew, keeping the plant stable, troubleshooting when things go sideways — that's where I'm comfortable.",
+      "Had a good moment last week actually — one of the juniors on my crew caught a compressor anomaly before it escalated. Tiny thing but he'd been listening. Told the whole crew about it at the next handover — that kind of thing matters.",
+      "You heard about what's happening over at Santos by the way? Apparently there's a big restructure coming. My mate Macca's been there eight years and he doesn't know if he's got a job. It's rough.",
+      "Makes you think about your own situation though, you know? I've been on this platform long enough. Starting to feel like maybe it's time.",
+      "My wife's back in Perth with the kids. Three of them — youngest just started school this year. The 28/28 rotation works okay but honestly I'd take a 2/1 if the right thing came up.",
+      "Actually the funniest thing happened on my last swing out — helicopter went tech on the pad, we were stuck there four hours. Forty blokes sitting in the terminal, someone pulled out a guitar. Honestly one of the best afternoons I've had in years.",
+      "But yeah. I think I want something with a bit more scope. I've been supervising for a while — I reckon I'm ready to step up. Take on more than one crew, or get into more of the planning and optimisation side.",
+      "Rate-wise I'm on 850 a day at the moment. I'd want to move up, not across — there's no point changing platforms for the same money.",
+      "Anyway I should probably get back in a minute. Was good chatting — what happens from here?",
+    ],
+  },
 ];
 
 // ─── Conversation scorer ──────────────────────────────────────────────────────
@@ -395,6 +423,28 @@ export function registerDashboardRoutes(app: Express): void {
     });
   });
 
+  // Prompt editor — get current prompt
+  app.get('/api/dashboard/prompt', (_req: Request, res: Response) => {
+    const overrides = loadPromptOverrides();
+    const hasOverride = overrides.masterOverride !== null;
+    res.json({
+      masterPrompt: hasOverride ? overrides.masterOverride : buildDefaultMasterTemplate(),
+      secondary: overrides.secondary,
+      hasOverride,
+    });
+  });
+
+  // Prompt editor — save changes
+  app.post('/api/dashboard/prompt', async (req: Request, res: Response) => {
+    try {
+      const { masterOverride, secondary } = req.body as { masterOverride: string | null; secondary: string };
+      await savePromptOverrides({ masterOverride: masterOverride ?? null, secondary: secondary ?? '' });
+      res.json({ ok: true });
+    } catch (err) {
+      res.status(500).json({ ok: false, error: String(err) });
+    }
+  });
+
   // List scenarios (exclude full message arrays)
   app.get('/api/dashboard/scenarios', (_req: Request, res: Response) => {
     res.json(SCENARIOS.map(({ id, title, candidateType, candidateName, profileContext, messages }) => ({
@@ -443,7 +493,7 @@ export function registerDashboardRoutes(app: Express): void {
     }
 
     try {
-      const llm = createLLM([], scenario.candidateName, scenario.profileContext);
+      const llm = createLLM(scenario.candidateName, scenario.profileContext ?? {}, getMYTDateTime());
       const transcript: TranscriptLine[] = [];
 
       const greeting = `Hey ${scenario.candidateName}, this is Treelance from Trees OS — just so you know, you're speaking with an AI. This is just a quick, relaxed chat to get to know you a bit better. Is now an okay time?`;
@@ -482,14 +532,74 @@ export function registerDashboardRoutes(app: Express): void {
     if (!res.writableEnded) res.end();
   });
 
+  // KPI aggregates
+  app.get('/api/dashboard/kpi', async (_req: Request, res: Response) => {
+    try {
+      const { data, error } = await supabase
+        .from('_assessments')
+        .select('created_at, channel')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      const rows = data ?? [];
+
+      const now = new Date();
+      const daysToMonday = now.getDay() === 0 ? 6 : now.getDay() - 1;
+      const thisWeekStart = new Date(now);
+      thisWeekStart.setDate(now.getDate() - daysToMonday);
+      thisWeekStart.setHours(0, 0, 0, 0);
+      const lastWeekStart = new Date(thisWeekStart);
+      lastWeekStart.setDate(thisWeekStart.getDate() - 7);
+
+      const thisWeek = rows.filter(r => new Date(r.created_at) >= thisWeekStart).length;
+      const lastWeek = rows.filter(r => {
+        const d = new Date(r.created_at);
+        return d >= lastWeekStart && d < thisWeekStart;
+      }).length;
+
+      const dailyCounts: { date: string; count: number }[] = [];
+      for (let i = 13; i >= 0; i--) {
+        const d = new Date(now);
+        d.setDate(now.getDate() - i);
+        const key = d.toISOString().slice(0, 10);
+        dailyCounts.push({ date: key, count: rows.filter(r => r.created_at.slice(0, 10) === key).length });
+      }
+
+      const channels: Record<string, number> = {};
+      rows.forEach(r => {
+        const ch = r.channel ?? 'voice';
+        channels[ch] = (channels[ch] ?? 0) + 1;
+      });
+
+      res.json({ total: rows.length, thisWeek, lastWeek, dailyCounts, channels });
+    } catch (err) {
+      res.json({ error: String(err) });
+    }
+  });
+
   // Assessments from Supabase
   app.get('/api/dashboard/assessments', async (_req: Request, res: Response) => {
     try {
       const { data, error } = await supabase
         .from('_assessments')
-        .select('talent_id, channel, assessor_type, created_at')
+        .select('talent_id, channel, assessor_type, created_at, _talent(name, phone)')
         .order('created_at', { ascending: false })
         .limit(50);
+      if (error) throw error;
+      res.json({ data: data ?? [] });
+    } catch (err) {
+      res.json({ data: [], error: err instanceof Error ? err.message : String(err) });
+    }
+  });
+
+  // Full transcripts list (with candidate name and AI summary)
+  app.get('/api/dashboard/transcripts', async (_req: Request, res: Response) => {
+    try {
+      const { data, error } = await supabase
+        .from('_assessments')
+        .select('id, talent_id, transcript, ai_summary, channel, assessor_type, created_at, _talent(name)')
+        .order('created_at', { ascending: false })
+        .limit(100);
       if (error) throw error;
       res.json({ data: data ?? [] });
     } catch (err) {
@@ -508,6 +618,91 @@ export function registerDashboardRoutes(app: Express): void {
       res.json({ data: data ?? [] });
     } catch (err) {
       res.json({ data: [], error: err instanceof Error ? err.message : String(err) });
+    }
+  });
+
+  // Candidates list for calling
+  app.get('/api/dashboard/candidates', async (_req: Request, res: Response) => {
+    try {
+      const { data, error } = await supabase
+        .from('_talent')
+        .select('id, name, email, phone')
+        .order('name', { ascending: true })
+        .limit(200);
+      if (error) throw error;
+      res.json({ data: data ?? [] });
+    } catch (err) {
+      res.json({ data: [], error: err instanceof Error ? err.message : String(err) });
+    }
+  });
+
+  // Trigger outbound call from dashboard (candidate from DB)
+  app.post('/api/dashboard/call', async (req: Request, res: Response) => {
+    const { talentId } = req.body as { talentId: string };
+    if (!talentId) {
+      res.status(400).json({ ok: false, error: 'Missing talentId' });
+      return;
+    }
+    try {
+      const { loadProfile } = await import('./interview/profileLoader');
+      const { initiateCall } = await import('./callController');
+      const profile = await loadProfile(talentId);
+      if (!profile.phone) {
+        res.status(400).json({ ok: false, error: 'No phone number on file for this candidate' });
+        return;
+      }
+      const candidateName = profile.name ?? 'Candidate';
+      const callSid = await initiateCall(profile.phone, candidateName, talentId);
+      res.json({ ok: true, callSid });
+    } catch (err) {
+      res.status(500).json({ ok: false, error: err instanceof Error ? err.message : String(err) });
+    }
+  });
+
+  // Active calls list
+  app.get('/api/dashboard/active-calls', (_req: Request, res: Response) => {
+    res.json({ calls: getActiveCalls() });
+  });
+
+  // Live transcript for an active call
+  app.get('/api/dashboard/call-transcript/:callSid', (req: Request, res: Response) => {
+    const handler = getHandler(req.params.callSid);
+    if (!handler) {
+      res.status(404).json({ error: 'Call not found or already ended' });
+      return;
+    }
+    res.json({ transcript: handler.getTranscript() });
+  });
+
+  // End an active call
+  app.post('/api/dashboard/end-call', async (req: Request, res: Response) => {
+    const { callSid } = req.body as { callSid: string };
+    if (!callSid) {
+      res.status(400).json({ ok: false, error: 'Missing callSid' });
+      return;
+    }
+    try {
+      const { endCall } = await import('./callController');
+      await endCall(callSid);
+      res.json({ ok: true });
+    } catch (err) {
+      res.status(500).json({ ok: false, error: err instanceof Error ? err.message : String(err) });
+    }
+  });
+
+  // Trigger manual call (name + phone provided directly, no DB lookup)
+  app.post('/api/dashboard/call-manual', async (req: Request, res: Response) => {
+    const { name, phone } = req.body as { name: string; phone: string };
+    if (!phone) {
+      res.status(400).json({ ok: false, error: 'Missing phone number' });
+      return;
+    }
+    try {
+      const { initiateCall } = await import('./callController');
+      const callSid = await initiateCall(phone, name ?? 'Test Candidate', 'manual');
+      res.json({ ok: true, callSid });
+    } catch (err) {
+      res.status(500).json({ ok: false, error: err instanceof Error ? err.message : String(err) });
     }
   });
 }

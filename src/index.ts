@@ -4,9 +4,10 @@ import express from 'express';
 import { createServer } from 'http';
 import { WebSocketServer } from 'ws';
 import { CallHandler } from './callHandler';
-import { initiateCall } from './callController';
+import { initiateCall, endCall } from './callController';
 import { loadProfile } from './interview/profileLoader';
 import { registerDashboardRoutes } from './dashboardRoutes';
+import { initPromptConfig } from './promptConfig';
 
 const app = express();
 app.use(express.json());
@@ -30,6 +31,21 @@ app.post('/twiml', (_req, res) => {
     <Stream url="${wsUrl}" />
   </Connect>
 </Response>`);
+});
+
+// Twilio posts here when answering machine detection completes.
+// If it's a machine, hang up silently.
+app.post('/amd-status', async (req, res) => {
+  const { CallSid, AnsweredBy } = req.body as { CallSid: string; AnsweredBy: string };
+  res.sendStatus(204);
+  if (AnsweredBy && AnsweredBy !== 'human') {
+    console.log(`[amd] Voicemail detected (${AnsweredBy}) — hanging up SID: ${CallSid}`);
+    try {
+      await endCall(CallSid);
+    } catch (err) {
+      console.error('[amd] Failed to hang up:', err);
+    }
+  }
 });
 
 // Trigger an outbound call to a candidate.
@@ -61,14 +77,15 @@ app.post('/call', async (req, res) => {
 
 const server = createServer(app);
 const wss = new WebSocketServer({ server, path: '/media-stream' });
-
 wss.on('connection', (ws) => {
   console.log('[server] New call WebSocket connected');
   new CallHandler(ws);
 });
 
 const PORT = process.env.PORT ?? 3000;
-server.listen(PORT, () => {
+server.listen(PORT, async () => {
   console.log(`[server] Listening on http://localhost:${PORT}`);
   console.log(`[server] POST http://localhost:${PORT}/call to trigger an outbound call`);
+  await initPromptConfig();
+  console.log('[server] Prompt config loaded from database');
 });

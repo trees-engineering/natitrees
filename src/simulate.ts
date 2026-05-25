@@ -1,6 +1,6 @@
 import 'dotenv/config';
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import { createLLM } from './llm';
+import { createLLM, getMYTDateTime } from './llm';
 
 interface Scenario {
   title: string;
@@ -443,6 +443,75 @@ const SCENARIOS: Scenario[] = [
     ],
   },
 
+  // ─── 13. The Social Drifter (Kevin) ───────────────────────────────
+  // Kevin is a Production Supervisor with 11 years offshore O&G experience.
+  // He's friendly and genuinely willing to talk — but keeps drifting into
+  // rig life stories, industry gossip, and crew banter. None of his tangents
+  // are hostile; they feel completely natural for someone who's spent years
+  // on platforms where yarning is how you pass time.
+  //
+  // This is the primary PURPOSE TEST. Every drift is a real invitation for
+  // the agent to either follow him off-purpose (fail) or anchor back to the
+  // profile warmly without making it feel like an interview checklist (pass).
+  //
+  // Key fail modes to watch for:
+  //   - Agent engages with the catering complaint, helicopter story, or "Macca"
+  //   - Agent lets Kevin close without surfacing rate, what he wants next,
+  //     or what's actually driving the move beyond vague restlessness
+  //   - Profile gaps (contract preference, mobility, motivations) still blank
+  //     at the end despite Kevin having given plenty of thread to open them
+  //   - Pivots feel abrupt or interrogation-like instead of warm and natural
+  {
+    title: 'The Social Drifter — Purpose Test',
+    candidateType: 'Friendly O&G veteran, drifts into rig stories and industry chat — primary purpose coverage test',
+    candidateName: 'Kevin',
+    profileContext: {
+      Headline: 'Production Supervisor — Offshore Oil & Gas',
+      Availability: 'Available in 4 weeks',
+      'Work rights': 'Full Australian working rights',
+    },
+    messages: [
+      // Casual opener — in rig downtime, relaxed. Social hook agent should not chase.
+      "Yeah mate now's fine, I'm on a turnaround break at the moment — just sitting in the wet mess. Not much else going on.",
+
+      // Willing to engage but keeps it surface-level initially
+      "I'm a production supervisor. Offshore — been out here for about eleven years now, mostly WA. Bit of NT as well.",
+
+      // Genuine info but buries the thread in platform colour
+      "Currently on a gas platform, Carnarvon Basin. It's a Woodside operation — been on this rotation about six months.",
+
+      // First real drift — catering complaint. Classic rig culture, completely off-purpose.
+      "The job's alright. Would be better if the catering wasn't so bad — last week they served us pasta three nights straight. Mate, you'd think for what they charge in mobilisation costs they could get a decent cook.",
+
+      // Returns himself — production background starts to surface
+      "But yeah the production side I genuinely enjoy. Running the shift crew, keeping the plant stable, troubleshooting when things go sideways — that's where I'm comfortable.",
+
+      // Values thread buried in a "funny" story — agent should pick up the leadership angle, not the punchline
+      "Had a good moment last week actually — one of the juniors on my crew caught a compressor anomaly before it escalated. Tiny thing but he'd been listening. Told the whole crew about it at the next handover — that kind of thing matters.",
+
+      // Drift — industry gossip about a competitor/company. Off-purpose.
+      "You heard about what's happening over at Santos by the way? Apparently there's a big restructure coming. My mate Macca's been there eight years and he doesn't know if he's got a job. It's rough.",
+
+      // Returns to himself — hint at why he's thinking of a move, but vague
+      "Makes you think about your own situation though, you know? I've been on this platform long enough. Starting to feel like maybe it's time.",
+
+      // Family/life thread surfaces — logistics and FIFO preference hiding here
+      "My wife's back in Perth with the kids. Three of them — youngest just started school this year. The 28/28 rotation works okay but honestly I'd take a 2/1 if the right thing came up.",
+
+      // Another drift — helicopter delay story. Well-told, completely irrelevant to profile.
+      "Actually the funniest thing happened on my last swing out — helicopter went tech on the pad, we were stuck there four hours. Forty blokes sitting in the terminal, someone pulled out a guitar. Honestly one of the best afternoons I've had in years.",
+
+      // Now gives the agent a real thread — what he wants next, if agent picks it up
+      "But yeah. I think I want something with a bit more scope. I've been supervising for a while — I reckon I'm ready to step up. Take on more than one crew, or get into more of the planning and optimisation side.",
+
+      // Rate — surfaces naturally, tests whether agent captures the specifics
+      "Rate-wise I'm on 850 a day at the moment. I'd want to move up, not across — there's no point changing platforms for the same money.",
+
+      // Tries to wrap it up casually — agent must use this moment well
+      "Anyway I should probably get back in a minute. Was good chatting — what happens from here?",
+    ],
+  },
+
 ];
 
 const DIVIDER = '═'.repeat(64);
@@ -454,7 +523,7 @@ async function runScenario(scenario: Scenario, index: number): Promise<void> {
   console.log(`Candidate: ${scenario.candidateName}`);
   console.log(DIVIDER);
 
-  const llm = createLLM([], scenario.candidateName, scenario.profileContext);
+  const llm = createLLM(scenario.candidateName, scenario.profileContext ?? {}, getMYTDateTime());
   const transcript: TranscriptLine[] = [];
 
   const greeting = `Hey ${scenario.candidateName}, this is Treelance from Trees OS — just so you know, you're speaking with an AI. This is just a quick, relaxed chat to get to know you a bit better. Is now an okay time?`;
