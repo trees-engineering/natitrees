@@ -2,7 +2,7 @@ import WebSocket from 'ws';
 import { createSTT, STTProvider } from './stt';
 import { createLLM, getMYTDateTime, LLMProvider } from './llm';
 import { createTTS, TTSProvider } from './tts';
-import { getCallMeta, removeCall } from './callStore';
+import { getCallMeta, removeCall, getGreetingAudio, clearGreetingAudio } from './callStore';
 import { registerHandler, removeHandler } from './activeCallRegistry';
 import { endCall } from './callController';
 import { SessionStore } from './interview/sessionStore';
@@ -35,6 +35,7 @@ export class CallHandler {
   private pendingUtterance: string | null = null;
   private callEnded = false;
   private callSid = '';
+  private candidateName = 'there';
   private session: SessionStore | null = null;
   private sessionReady: Promise<void> = Promise.resolve();
   private callEndTimer: ReturnType<typeof setTimeout> | null = null;
@@ -70,10 +71,13 @@ export class CallHandler {
       console.log(`[call] Stream started — SID: ${this.streamSid}`);
       const meta = getCallMeta(this.callSid);
       if (meta) {
-        this.session = new SessionStore(meta.talentId);
-        this.sessionReady = this.session.load().catch(err =>
-          console.error('[call] Session load failed:', err)
-        );
+        this.candidateName = meta.candidateName || 'there';
+        if (meta.talentId !== 'manual') {
+          this.session = new SessionStore(meta.talentId);
+          this.sessionReady = this.session.load().catch(err =>
+            console.error('[call] Session load failed:', err)
+          );
+        }
       }
       void this.agentSpeakFirst();
     }
@@ -114,20 +118,31 @@ export class CallHandler {
   }
 
   private async agentSpeakFirst(): Promise<void> {
-    await this.sessionReady;
-    const candidateName = this.session?.getCandidateName() ?? 'there';
+    const candidateName = this.candidateName;
 
     const greeting = `Hey ${candidateName}, this is Treelance from Trees OS — just so you know, you're speaking with an AI. This is just a quick, relaxed chat to get to know you a bit better. Is now an okay time?`;
 
     this.agentSpeaking = true;
     this.agentSpeakingStart = Date.now();
     try {
-      const sentences = greeting.match(/[^.!?]+[.!?]+/g) ?? [greeting];
-      for (const sentence of sentences) {
-        if (this.interrupted) break;
-        await this.streamToTwilio(sentence.trim());
+      const preGenChunks = getGreetingAudio(this.callSid);
+      if (preGenChunks) {
+        clearGreetingAudio(this.callSid);
+        console.log('[greeting] Playing pre-generated audio');
+        for (const chunk of preGenChunks) {
+          if (this.interrupted) break;
+          this.sendAudioToTwilio(chunk);
+        }
+      } else {
+        console.log('[greeting] Pre-generated audio not ready — using real-time TTS');
+        const sentences = greeting.match(/[^.!?]+[.!?]+/g) ?? [greeting];
+        for (const sentence of sentences) {
+          if (this.interrupted) break;
+          await this.streamToTwilio(sentence.trim());
+        }
       }
 
+      await this.sessionReady;
       const profileData = this.session?.getProfileContext() ?? {};
       console.log(`[llm] Building prompt for ${candidateName}`);
       this.llm = createLLM(candidateName, profileData, getMYTDateTime());

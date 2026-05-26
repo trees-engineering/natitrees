@@ -1,5 +1,6 @@
 import twilio from 'twilio';
-import { registerCall, hasActiveCallForTalent } from './callStore';
+import { registerCall, hasActiveCallForTalent, storeGreetingAudio } from './callStore';
+import { CartesiaTTS } from './providers/tts/cartesia';
 
 const client = twilio(
   process.env.TWILIO_ACCOUNT_SID,
@@ -31,5 +32,21 @@ export async function initiateCall(to: string, candidateName: string, talentId: 
 
   registerCall(call.sid, { talentId, candidateName });
   console.log(`[call] Calling ${candidateName} at ${to} — SID: ${call.sid}`);
+  void preGenerateGreeting(call.sid, candidateName);
   return call.sid;
+}
+
+async function preGenerateGreeting(callSid: string, candidateName: string): Promise<void> {
+  const text = `Hey ${candidateName}, this is Treelance from Trees OS — just so you know, you're speaking with an AI. This is just a quick, relaxed chat to get to know you a bit better. Is now an okay time?`;
+  const tts = new CartesiaTTS();
+  const chunks: Buffer[] = [];
+  try {
+    for await (const chunk of tts.stream(text)) {
+      chunks.push(chunk);
+    }
+    storeGreetingAudio(callSid, chunks);
+    console.log(`[greeting] Pre-generated for ${candidateName}`);
+  } catch (err) {
+    console.error('[greeting] Pre-generation failed — will use real-time TTS:', err);
+  }
 }
