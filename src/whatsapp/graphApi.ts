@@ -70,7 +70,7 @@ export async function requestCallPermission(to: string, bodyText: string): Promi
       interactive: {
         type: 'call_permission_request',
         body: { text: bodyText },
-        action: {},
+        action: { name: 'call_permission_request' },
       },
     }),
   });
