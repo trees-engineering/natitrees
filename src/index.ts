@@ -8,6 +8,9 @@ import { initiateCall, endCall } from './callController';
 import { loadProfile } from './interview/profileLoader';
 import { registerDashboardRoutes } from './dashboardRoutes';
 import { initPromptConfig } from './promptConfig';
+import { initiateWhatsAppCall } from './whatsapp/callController';
+import { sendWhatsAppMessage } from './whatsapp/graphApi';
+import { WhatsAppCallHandler, getWaHandler } from './whatsapp/callHandler';
 
 const app = express();
 app.use(express.json());
@@ -75,6 +78,83 @@ app.post('/call', async (req, res) => {
     res.status(500).json({ success: false, error: String(err) });
   }
 });
+
+// ── WhatsApp routes ────────────────────────────────────────────────────────
+
+// Meta calls this GET to verify your webhook URL in the developer console.
+app.get('/wa/webhook', (req, res) => {
+  const mode = req.query['hub.mode'];
+  const token = req.query['hub.verify_token'];
+  const challenge = req.query['hub.challenge'];
+  if (mode === 'subscribe' && token === process.env.WHATSAPP_WEBHOOK_VERIFY_TOKEN) {
+    res.send(challenge);
+  } else {
+    res.sendStatus(403);
+  }
+});
+
+// Meta posts call events here (ringing, accepted with SDP, ended, declined).
+app.post('/wa/webhook', (req, res) => {
+  res.sendStatus(200); // acknowledge immediately — Meta requires fast response
+  const entries: unknown[] = req.body?.entry ?? [];
+  for (const entry of entries as Array<{ changes?: Array<{ value?: { calls?: Array<{ call_id: string; status: string; sdp?: string }> } }> }>) {
+    for (const change of entry.changes ?? []) {
+      for (const call of change.value?.calls ?? []) {
+        if (call.status === 'accepted' && call.sdp) {
+          console.log(`[wa-webhook] Call accepted — callId: ${call.call_id}`);
+          if (!getWaHandler(call.call_id)) {
+            new WhatsAppCallHandler(call.call_id, call.sdp);
+          }
+        } else if (call.status === 'ended' || call.status === 'declined' || call.status === 'no_answer') {
+          console.log(`[wa-webhook] Call ${call.status} — callId: ${call.call_id}`);
+          getWaHandler(call.call_id)?.end();
+        }
+      }
+    }
+  }
+});
+
+// Send a pre-call WhatsApp message to warm up the candidate before calling.
+// POST /wa/message  { "to": "+60123456789", "message": "Hi, we'd like to chat!" }
+app.post('/wa/message', async (req, res) => {
+  const { to, message } = req.body as { to: string; message: string };
+  if (!to || !message) {
+    res.status(400).json({ error: 'Missing "to" or "message"' });
+    return;
+  }
+  try {
+    await sendWhatsAppMessage(to, message);
+    res.json({ success: true });
+  } catch (err) {
+    console.error('[wa] Failed to send message:', err);
+    res.status(500).json({ success: false, error: String(err) });
+  }
+});
+
+// Trigger a WhatsApp outbound call to a candidate.
+// POST /wa/call  { "talentId": "abc-123" }
+app.post('/wa/call', async (req, res) => {
+  const { talentId } = req.body as { talentId: string };
+  if (!talentId) {
+    res.status(400).json({ error: 'Missing "talentId"' });
+    return;
+  }
+  try {
+    const profile = await loadProfile(talentId);
+    if (!profile.phone) {
+      res.status(400).json({ error: `No phone number on file for talent ${talentId}` });
+      return;
+    }
+    const candidateName = profile.name ?? 'Candidate';
+    const callId = await initiateWhatsAppCall(profile.phone, candidateName, talentId);
+    res.json({ success: true, callId });
+  } catch (err) {
+    console.error('[wa] Failed to initiate call:', err);
+    res.status(500).json({ success: false, error: String(err) });
+  }
+});
+
+// ── end WhatsApp routes ────────────────────────────────────────────────────
 
 const server = createServer(app);
 const wss = new WebSocketServer({ server, path: '/media-stream' });
