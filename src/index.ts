@@ -16,6 +16,7 @@ app.use(express.urlencoded({ extended: false }));
 // Dashboard — served at /dashboard, API at /api/dashboard/*
 registerDashboardRoutes(app);
 app.use('/dashboard', express.static(path.join(__dirname, '../dashboard')));
+app.get('/', (_req, res) => res.redirect('/dashboard'));
 
 // Twilio fetches this when the outbound call is answered.
 // It tells Twilio to connect the call audio to our WebSocket.
