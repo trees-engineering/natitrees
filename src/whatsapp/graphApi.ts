@@ -11,7 +11,7 @@ export async function initiateWaCall(to: string): Promise<string> {
   const res = await fetch(`${BASE}/${process.env.WHATSAPP_PHONE_NUMBER_ID}/calls`, {
     method: 'POST',
     headers: authHeaders(),
-    body: JSON.stringify({ to }),
+    body: JSON.stringify({ messaging_product: 'whatsapp', to }),
   });
   if (!res.ok) throw new Error(`Graph API initiate call: ${await res.text()}`);
   const data = (await res.json()) as { id: string };
