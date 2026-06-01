@@ -1125,6 +1125,88 @@ function initCalls() {
 }
 
 // ═══════════════════════════════════════
+//  WHATSAPP TESTING
+// ═══════════════════════════════════════
+
+function initWaTest() {
+  const phoneInput = document.getElementById('wa-phone');
+  const nameInput  = document.getElementById('wa-name');
+  const msgInput   = document.getElementById('wa-message');
+  const sendBtn    = document.getElementById('wa-send-msg-btn');
+  const callBtn    = document.getElementById('wa-call-btn');
+  const statusEl   = document.getElementById('wa-test-status');
+
+  function updateWaBtns() {
+    const hasPhone = phoneInput.value.trim().length > 0;
+    sendBtn.disabled = !hasPhone || !msgInput.value.trim();
+    callBtn.disabled = !hasPhone;
+  }
+
+  phoneInput.addEventListener('input', updateWaBtns);
+  msgInput.addEventListener('input', updateWaBtns);
+
+  function showWaStatus(msg, isError = false) {
+    statusEl.textContent = msg;
+    statusEl.style.display = '';
+    statusEl.style.background = isError ? 'rgba(220,53,69,0.12)' : 'rgba(25,135,84,0.12)';
+    statusEl.style.color = isError ? '#dc3545' : '#198754';
+    statusEl.style.border = `1px solid ${isError ? 'rgba(220,53,69,0.3)' : 'rgba(25,135,84,0.3)'}`;
+  }
+
+  sendBtn.addEventListener('click', async () => {
+    const phone = phoneInput.value.trim();
+    const message = msgInput.value.trim();
+    if (!phone || !message) return;
+
+    sendBtn.disabled = true;
+    sendBtn.textContent = 'Sending…';
+    try {
+      const res = await fetch('/wa/message', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ to: phone, message }),
+      });
+      const data = await res.json();
+      if (!data.success) throw new Error(data.error);
+      showWaStatus('Message sent successfully. You can now trigger the call.');
+      showToast('WhatsApp message sent');
+    } catch (err) {
+      showWaStatus('Failed to send message: ' + String(err), true);
+      showToast('Message failed: ' + String(err), true);
+    } finally {
+      sendBtn.textContent = '💬 Send Message';
+      updateWaBtns();
+    }
+  });
+
+  callBtn.addEventListener('click', async () => {
+    const phone = phoneInput.value.trim();
+    const name  = nameInput.value.trim() || 'Test Candidate';
+    if (!phone) return;
+
+    callBtn.disabled = true;
+    callBtn.textContent = 'Calling…';
+    try {
+      const res = await fetch('/wa/call-manual', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, phone }),
+      });
+      const data = await res.json();
+      if (!data.success) throw new Error(data.error);
+      showWaStatus(`Call initiated — callId: ${data.callId}. The candidate's WhatsApp should ring now.`);
+      showToast(`WhatsApp call started — ${name}`);
+    } catch (err) {
+      showWaStatus('Call failed: ' + String(err), true);
+      showToast('WhatsApp call failed: ' + String(err), true);
+    } finally {
+      callBtn.textContent = '📱 Call via WhatsApp';
+      updateWaBtns();
+    }
+  });
+}
+
+// ═══════════════════════════════════════
 //  PROMPT EDITOR
 // ═══════════════════════════════════════
 
@@ -1269,6 +1351,7 @@ function init() {
   initCalls();
   initActiveBanner();
   initPromptEditor();
+  initWaTest();
   checkStatus();
   loadConfig();
   setInterval(checkStatus, 30_000);

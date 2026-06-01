@@ -154,6 +154,24 @@ app.post('/wa/call', async (req, res) => {
   }
 });
 
+// Manual WhatsApp call by phone number — for testing without a talentId.
+// POST /wa/call-manual  { "name": "John", "phone": "+601234567890" }
+app.post('/wa/call-manual', async (req, res) => {
+  const { name, phone } = req.body as { name: string; phone: string };
+  if (!phone) {
+    res.status(400).json({ error: 'Missing "phone"' });
+    return;
+  }
+  try {
+    const candidateName = name?.trim() || 'Test Candidate';
+    const callId = await initiateWhatsAppCall(phone, candidateName, 'manual');
+    res.json({ success: true, callId });
+  } catch (err) {
+    console.error('[wa] Failed to initiate manual call:', err);
+    res.status(500).json({ success: false, error: String(err) });
+  }
+});
+
 // ── end WhatsApp routes ────────────────────────────────────────────────────
 
 const server = createServer(app);

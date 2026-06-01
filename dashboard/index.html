@@ -319,6 +319,34 @@
         </button>
       </div>
 
+      <!-- WhatsApp Call -->
+      <div class="section-label">WhatsApp Call</div>
+      <div class="card" style="margin-bottom:20px">
+        <div class="card-title">📱 Call via WhatsApp</div>
+        <div class="card-desc" style="margin-bottom:14px">Send a pre-call message then trigger a live WhatsApp call. The call rings directly on the candidate's WhatsApp app.</div>
+        <div class="custom-fields">
+          <div class="field-group">
+            <div class="field-label">Phone Number <span class="field-required">*</span></div>
+            <input class="field-input" id="wa-phone" type="tel" placeholder="+601234567890" maxlength="20">
+          </div>
+          <div class="field-group">
+            <div class="field-label">Candidate Name (optional)</div>
+            <input class="field-input" id="wa-name" type="text" placeholder="e.g. John Smith" maxlength="80">
+          </div>
+          <div class="field-group">
+            <div class="field-label">Pre-call Message (optional)</div>
+            <textarea class="field-input field-textarea" id="wa-message"
+              placeholder="Hi! Treelance AI will call you shortly for a quick chat. Is now a good time?"></textarea>
+            <div class="field-hint">Sent via WhatsApp before calling. Requires an active 24h conversation window or an approved Meta template.</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:10px;margin-top:4px;flex-wrap:wrap">
+          <button class="call-btn" id="wa-send-msg-btn" disabled style="flex:1;min-width:140px">💬 Send Message</button>
+          <button class="call-btn" id="wa-call-btn" disabled style="flex:1;min-width:140px">📱 Call via WhatsApp</button>
+        </div>
+        <div id="wa-test-status" style="display:none;margin-top:12px;padding:10px 12px;border-radius:8px;font-size:13px"></div>
+      </div>
+
       <!-- Candidate Dropdown -->
       <div class="section-label">Candidates</div>
       <div class="card" id="candidates-card">
