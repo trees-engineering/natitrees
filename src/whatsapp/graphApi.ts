@@ -59,7 +59,7 @@ export async function sendWhatsAppMessage(to: string, body: string): Promise<voi
 // Request call permission from a user within an active 24-hour messaging session.
 // The user receives a WhatsApp prompt asking to allow calls from your business.
 // They must accept before initiateWaCall will succeed.
-export async function requestCallPermission(to: string): Promise<void> {
+export async function requestCallPermission(to: string, bodyText: string): Promise<void> {
   const res = await fetch(`${BASE}/${process.env.WHATSAPP_PHONE_NUMBER_ID}/messages`, {
     method: 'POST',
     headers: authHeaders(),
@@ -69,9 +69,7 @@ export async function requestCallPermission(to: string): Promise<void> {
       type: 'interactive',
       interactive: {
         type: 'call_permission_request',
-        body: {
-          text: 'Would you like to receive a call from us on WhatsApp for your interview?',
-        },
+        body: { text: bodyText },
         action: {},
       },
     }),

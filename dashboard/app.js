@@ -1155,26 +1155,27 @@ function initWaTest() {
 
   sendBtn.addEventListener('click', async () => {
     const phone = phoneInput.value.trim();
+    const name  = nameInput.value.trim() || 'Candidate';
     const message = msgInput.value.trim();
-    if (!phone || !message) return;
+    if (!phone) return;
 
     sendBtn.disabled = true;
     sendBtn.textContent = 'Sending…';
     try {
-      const res = await fetch('/wa/message', {
+      const res = await fetch('/wa/request-permission', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ to: phone, message }),
+        body: JSON.stringify({ to: phone, name, message }),
       });
       const data = await res.json();
       if (!data.success) throw new Error(data.error);
-      showWaStatus('Message sent successfully. You can now trigger the call.');
-      showToast('WhatsApp message sent');
+      showWaStatus('Permission request sent — waiting for candidate to accept. The call will trigger automatically when they do.');
+      showToast('Permission request sent');
     } catch (err) {
-      showWaStatus('Failed to send message: ' + String(err), true);
-      showToast('Message failed: ' + String(err), true);
+      showWaStatus('Failed to send permission request: ' + String(err), true);
+      showToast('Request failed: ' + String(err), true);
     } finally {
-      sendBtn.textContent = '💬 Send Message';
+      sendBtn.textContent = '📋 Request Permission';
       updateWaBtns();
     }
   });

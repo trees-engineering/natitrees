@@ -79,6 +79,9 @@ app.post('/call', async (req, res) => {
   }
 });
 
+// Stores pending WhatsApp calls waiting for candidate permission acceptance
+const pendingWaCalls = new Map<string, { phone: string; name: string }>();
+
 // ── WhatsApp routes ────────────────────────────────────────────────────────
 
 // Meta calls this GET to verify your webhook URL in the developer console.
@@ -93,13 +96,17 @@ app.get('/wa/webhook', (req, res) => {
   }
 });
 
-// Meta posts call events here (ringing, accepted with SDP, ended, declined).
+// Meta posts call events and message interactions here.
 app.post('/wa/webhook', (req, res) => {
   res.sendStatus(200); // acknowledge immediately — Meta requires fast response
-  const entries: unknown[] = req.body?.entry ?? [];
-  for (const entry of entries as Array<{ changes?: Array<{ value?: { calls?: Array<{ call_id: string; status: string; sdp?: string }> } }> }>) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const entries: any[] = req.body?.entry ?? [];
+  for (const entry of entries) {
     for (const change of entry.changes ?? []) {
-      for (const call of change.value?.calls ?? []) {
+      const value = change.value ?? {};
+
+      // Handle call lifecycle events (ringing, accepted with SDP, ended, declined)
+      for (const call of value.calls ?? []) {
         if (call.status === 'accepted' && call.sdp) {
           console.log(`[wa-webhook] Call accepted — callId: ${call.call_id}`);
           if (!getWaHandler(call.call_id)) {
@@ -108,6 +115,26 @@ app.post('/wa/webhook', (req, res) => {
         } else if (call.status === 'ended' || call.status === 'declined' || call.status === 'no_answer') {
           console.log(`[wa-webhook] Call ${call.status} — callId: ${call.call_id}`);
           getWaHandler(call.call_id)?.end();
+        }
+      }
+
+      // Handle candidate accepting call permission request — auto-trigger call
+      for (const msg of value.messages ?? []) {
+        const from: string = msg.from;
+        const isPermissionAccepted =
+          msg.type === 'interactive' &&
+          msg.interactive?.type === 'call_permission_request' &&
+          msg.interactive?.call_permission_request?.status === 'accepted';
+
+        if (isPermissionAccepted) {
+          const pending = pendingWaCalls.get(from);
+          if (pending) {
+            pendingWaCalls.delete(from);
+            console.log(`[wa-webhook] Permission accepted by ${from} — auto-calling ${pending.name}`);
+            void initiateWhatsAppCall(pending.phone, pending.name, 'manual')
+              .then(id => console.log(`[wa] Auto-call initiated — callId: ${id}`))
+              .catch(err => console.error('[wa] Auto-call after permission failed:', err));
+          }
         }
       }
     }
@@ -131,16 +158,21 @@ app.post('/wa/message', async (req, res) => {
   }
 });
 
-// Request call permission from a candidate before calling.
-// POST /wa/request-permission  { "to": "+601234567890" }
+// Send a call permission request to a candidate.
+// When they accept, the call is triggered automatically via the webhook.
+// POST /wa/request-permission  { "to": "+601234567890", "name": "John", "message": "..." }
 app.post('/wa/request-permission', async (req, res) => {
-  const { to } = req.body as { to: string };
+  const { to, name, message } = req.body as { to: string; name: string; message: string };
   if (!to) {
     res.status(400).json({ error: 'Missing "to"' });
     return;
   }
+  const bodyText = message?.trim() ||
+    'Treelance AI would like to call you for a quick chat about your profile. Would you like to accept the call?';
   try {
-    await requestCallPermission(to);
+    await requestCallPermission(to, bodyText);
+    pendingWaCalls.set(to, { phone: to, name: name?.trim() || 'Candidate' });
+    console.log(`[wa] Permission request sent to ${to} — pending call stored`);
     res.json({ success: true });
   } catch (err) {
     console.error('[wa] Failed to send call permission request:', err);

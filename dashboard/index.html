@@ -334,15 +334,15 @@
             <input class="field-input" id="wa-name" type="text" placeholder="e.g. John Smith" maxlength="80">
           </div>
           <div class="field-group">
-            <div class="field-label">Pre-call Message (optional)</div>
+            <div class="field-label">Permission Request Message</div>
             <textarea class="field-input field-textarea" id="wa-message"
-              placeholder="Hi! Treelance AI will call you shortly for a quick chat. Is now a good time?"></textarea>
-            <div class="field-hint">Sent via WhatsApp before calling. Requires an active 24h conversation window or an approved Meta template.</div>
+              placeholder="Hi! Treelance AI would like to call you for a quick chat about your profile. Would you like to accept the call?"></textarea>
+            <div class="field-hint">The candidate receives this message with an Accept/Decline button. When they tap Accept, the call triggers automatically.</div>
           </div>
         </div>
         <div style="display:flex;gap:10px;margin-top:4px;flex-wrap:wrap">
-          <button class="call-btn" id="wa-send-msg-btn" disabled style="flex:1;min-width:140px">💬 Send Message</button>
-          <button class="call-btn" id="wa-call-btn" disabled style="flex:1;min-width:140px">📱 Call via WhatsApp</button>
+          <button class="call-btn" id="wa-send-msg-btn" disabled style="flex:1;min-width:140px">📋 Request Permission</button>
+          <button class="call-btn" id="wa-call-btn" disabled style="flex:1;min-width:140px">📱 Call Directly</button>
         </div>
         <div id="wa-test-status" style="display:none;margin-top:12px;padding:10px 12px;border-radius:8px;font-size:13px"></div>
       </div>
