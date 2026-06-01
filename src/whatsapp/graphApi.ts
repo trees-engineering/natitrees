@@ -56,6 +56,29 @@ export async function sendWhatsAppMessage(to: string, body: string): Promise<voi
   if (!res.ok) throw new Error(`Graph API send message: ${await res.text()}`);
 }
 
+// Request call permission from a user within an active 24-hour messaging session.
+// The user receives a WhatsApp prompt asking to allow calls from your business.
+// They must accept before initiateWaCall will succeed.
+export async function requestCallPermission(to: string): Promise<void> {
+  const res = await fetch(`${BASE}/${process.env.WHATSAPP_PHONE_NUMBER_ID}/messages`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({
+      messaging_product: 'whatsapp',
+      to,
+      type: 'interactive',
+      interactive: {
+        type: 'call_permission_request',
+        body: {
+          text: 'Would you like to receive a call from us on WhatsApp for your interview?',
+        },
+        action: {},
+      },
+    }),
+  });
+  if (!res.ok) throw new Error(`Graph API call permission request: ${await res.text()}`);
+}
+
 // Send a pre-approved template message — required for cold outreach.
 // templateName must match a template you've created and approved in Meta Business Manager.
 export async function sendTemplateMessage(

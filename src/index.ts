@@ -9,7 +9,7 @@ import { loadProfile } from './interview/profileLoader';
 import { registerDashboardRoutes } from './dashboardRoutes';
 import { initPromptConfig } from './promptConfig';
 import { initiateWhatsAppCall } from './whatsapp/callController';
-import { sendWhatsAppMessage } from './whatsapp/graphApi';
+import { sendWhatsAppMessage, requestCallPermission } from './whatsapp/graphApi';
 import { WhatsAppCallHandler, getWaHandler } from './whatsapp/callHandler';
 
 const app = express();
@@ -127,6 +127,23 @@ app.post('/wa/message', async (req, res) => {
     res.json({ success: true });
   } catch (err) {
     console.error('[wa] Failed to send message:', err);
+    res.status(500).json({ success: false, error: String(err) });
+  }
+});
+
+// Request call permission from a candidate before calling.
+// POST /wa/request-permission  { "to": "+601234567890" }
+app.post('/wa/request-permission', async (req, res) => {
+  const { to } = req.body as { to: string };
+  if (!to) {
+    res.status(400).json({ error: 'Missing "to"' });
+    return;
+  }
+  try {
+    await requestCallPermission(to);
+    res.json({ success: true });
+  } catch (err) {
+    console.error('[wa] Failed to send call permission request:', err);
     res.status(500).json({ success: false, error: String(err) });
   }
 });
