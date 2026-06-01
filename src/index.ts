@@ -121,10 +121,17 @@ app.post('/wa/webhook', (req, res) => {
       // Handle candidate accepting call permission request — auto-trigger call
       for (const msg of value.messages ?? []) {
         const from: string = msg.from;
+
+        // Support both Meta Cloud API and Infobip webhook formats
         const isPermissionAccepted =
-          msg.type === 'interactive' &&
-          msg.interactive?.type === 'call_permission_request' &&
-          msg.interactive?.call_permission_request?.status === 'accepted';
+          // Meta Cloud API format
+          (msg.type === 'interactive' && (
+            msg.interactive?.call_permission_reply?.response === 'ACCEPT' ||
+            msg.interactive?.call_permission_request?.status === 'accepted'
+          )) ||
+          // Infobip / alternate format
+          (msg.type === 'INTERACTIVE_CALL_PERMISSION_REPLY' &&
+            msg.callPermissionReply?.response === 'ACCEPT');
 
         if (isPermissionAccepted) {
           const pending = pendingWaCalls.get(from);
