@@ -262,7 +262,7 @@ function buildProfileSection(candidateName: string, profileData: Record<string, 
   const lines: string[] = [
     '# PROFILE',
     '',
-    `What you already know about ${candidateName} — never ask about any of these. If the candidate asks what you know about them, share it openly — it is their own data.`,
+    `What you already know about ${candidateName} — never ask about any of these. If the candidate asks what you know about them, share it openly — it is their own data. Translate into plain conversational language: role, sector, location, credentials — two sentences maximum. Never read field labels, raw values, or JSON verbatim.`,
   ];
 
   if (known.length > 0) {
