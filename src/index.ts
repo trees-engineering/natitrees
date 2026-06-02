@@ -5,6 +5,7 @@ import { createServer } from 'http';
 import { WebSocketServer } from 'ws';
 import { CallHandler } from './callHandler';
 import { initiateCall, endCall } from './callController';
+import { removeCall } from './callStore';
 import { loadProfile } from './interview/profileLoader';
 import { registerDashboardRoutes } from './dashboardRoutes';
 import { initPromptConfig } from './promptConfig';
@@ -32,6 +33,15 @@ app.post('/twiml', (_req, res) => {
     <Stream url="${wsUrl}" />
   </Connect>
 </Response>`);
+});
+
+// Twilio posts here when a call ends without ever connecting (failed, busy, no-answer, canceled).
+// Cleans up the call store so the talent isn't locked as "in progress".
+app.post('/call-status', (req, res) => {
+  const { CallSid, CallStatus } = req.body as { CallSid: string; CallStatus: string };
+  res.sendStatus(204);
+  console.log(`[call-status] ${CallSid} → ${CallStatus}`);
+  removeCall(CallSid);
 });
 
 // Twilio posts here when answering machine detection completes.
