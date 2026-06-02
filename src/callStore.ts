@@ -1,6 +1,7 @@
 interface CallMeta {
   talentId: string;
   candidateName: string;
+  isReturning?: boolean;
 }
 
 const store = new Map<string, CallMeta>();

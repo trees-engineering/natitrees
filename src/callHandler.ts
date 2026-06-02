@@ -47,7 +47,10 @@ export class CallHandler {
     this.tts = createTTS();
 
     this.stt.onTranscript((text) => this.handleCandidateSpeech(text));
-    this.stt.onInterimTranscript((text) => console.log(`[interim] ${text}`));
+    this.stt.onInterimTranscript((text) => {
+      console.log(`[interim] ${text}`);
+      if (this.agentSpeaking && text.trim()) this.interruptAgent();
+    });
 
     this.stt.onSpeechStart(() => {
       if (!this.agentSpeaking && this.sttStart === 0) this.sttStart = Date.now();
@@ -109,18 +112,22 @@ export class CallHandler {
     this.lastInterruptTime = now;
     this.sttStart = Date.now();
 
-    this.ttsAbortController?.abort();
-
     if (this.ws.readyState === WebSocket.OPEN && this.streamSid) {
       this.ws.send(JSON.stringify({ event: 'clear', streamSid: this.streamSid }));
     }
+
+    this.ttsAbortController?.abort();
     console.log('[barge-in] Agent interrupted — TTS aborted, Twilio cleared');
   }
 
   private async agentSpeakFirst(): Promise<void> {
     const candidateName = this.candidateName;
+    const meta = getCallMeta(this.callSid);
+    const isReturning = meta?.isReturning ?? false;
 
-    const greeting = `Hey ${candidateName}, this is Treelance from Trees OS — just so you know, you're speaking with an AI. This is just a quick, relaxed chat to get to know you a bit better. Is now an okay time?`;
+    const greeting = isReturning
+      ? `Hey ${candidateName}, it's Treelance again from Trees OS. Good to speak with you. Is now a good time?`
+      : `Hey ${candidateName}, this is Treelance from Trees OS — just so you know, you're speaking with an AI. This is just a quick, relaxed chat to get to know you a bit better. Is now an okay time?`;
 
     this.agentSpeaking = true;
     this.agentSpeakingStart = Date.now();
@@ -280,11 +287,14 @@ export class CallHandler {
     if (this.ws.readyState !== WebSocket.OPEN) return;
     if (!this.streamSid) return;
 
-    this.ws.send(JSON.stringify({
-      event: 'media',
-      streamSid: this.streamSid,
-      media: { payload: audioChunk.toString('base64') },
-    }));
+    const CHUNK_SIZE = 160; // 20ms of mulaw at 8000Hz — minimises Twilio buffer on interrupt
+    for (let i = 0; i < audioChunk.length; i += CHUNK_SIZE) {
+      this.ws.send(JSON.stringify({
+        event: 'media',
+        streamSid: this.streamSid,
+        media: { payload: audioChunk.subarray(i, i + CHUNK_SIZE).toString('base64') },
+      }));
+    }
   }
 
   private scheduleCallEnd(): void {
@@ -337,9 +347,9 @@ export class CallHandler {
     history.forEach((m) => console.log(`  [${m.role}] ${m.content}`));
     this.stt.close();
     removeHandler(this.callSid);
+    removeCall(this.callSid);
     if (this.session) {
       void this.session.save(history);
-      removeCall(this.callSid);
     }
   }
 }

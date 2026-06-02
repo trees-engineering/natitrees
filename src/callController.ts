@@ -1,6 +1,7 @@
 import twilio from 'twilio';
 import { registerCall, hasActiveCallForTalent, storeGreetingAudio } from './callStore';
 import { CartesiaTTS } from './providers/tts/cartesia';
+import { supabase } from './db/supabase';
 
 const client = twilio(
   process.env.TWILIO_ACCOUNT_SID,
@@ -19,25 +20,37 @@ export async function initiateCall(to: string, candidateName: string, talentId: 
 
   const twimlUrl = `${process.env.PUBLIC_HTTP_URL}/twiml`;
   const amdCallbackUrl = `${process.env.PUBLIC_HTTP_URL}/amd-status`;
+  const statusCallbackUrl = `${process.env.PUBLIC_HTTP_URL}/call-status`;
 
-  const call = await client.calls.create({
-    to,
-    from: process.env.TWILIO_PHONE_NUMBER!,
-    url: twimlUrl,
-    method: 'POST',
-    machineDetection: 'Enable',
-    asyncAmdStatusCallback: amdCallbackUrl,
-    asyncAmdStatusCallbackMethod: 'POST',
-  });
+  const [call, assessmentResult] = await Promise.all([
+    client.calls.create({
+      to,
+      from: process.env.TWILIO_PHONE_NUMBER!,
+      url: twimlUrl,
+      method: 'POST',
+      machineDetection: 'Enable',
+      asyncAmdStatusCallback: amdCallbackUrl,
+      asyncAmdStatusCallbackMethod: 'POST',
+      statusCallback: statusCallbackUrl,
+      statusCallbackMethod: 'POST',
+      statusCallbackEvent: ['failed', 'busy', 'no-answer', 'canceled'],
+    }),
+    talentId !== 'manual'
+      ? supabase.from('_assessments').select('id').eq('talent_id', talentId).eq('assessor_type', 'ai').limit(1)
+      : Promise.resolve({ data: [] }),
+  ]);
 
-  registerCall(call.sid, { talentId, candidateName });
-  console.log(`[call] Calling ${candidateName} at ${to} — SID: ${call.sid}`);
-  void preGenerateGreeting(call.sid, candidateName);
+  const isReturning = !!(assessmentResult.data && assessmentResult.data.length > 0);
+  registerCall(call.sid, { talentId, candidateName, isReturning });
+  console.log(`[call] Calling ${candidateName} at ${to} — SID: ${call.sid} (returning=${isReturning})`);
+  void preGenerateGreeting(call.sid, candidateName, isReturning);
   return call.sid;
 }
 
-async function preGenerateGreeting(callSid: string, candidateName: string): Promise<void> {
-  const text = `Hey ${candidateName}, this is Treelance from Trees OS — just so you know, you're speaking with an AI. This is just a quick, relaxed chat to get to know you a bit better. Is now an okay time?`;
+async function preGenerateGreeting(callSid: string, candidateName: string, isReturning: boolean): Promise<void> {
+  const text = isReturning
+    ? `Hey ${candidateName}, it's Treelance again from Trees OS. Good to speak with you. Is now a good time?`
+    : `Hey ${candidateName}, this is Treelance from Trees OS — just so you know, you're speaking with an AI. This is just a quick, relaxed chat to get to know you a bit better. Is now an okay time?`;
   const tts = new CartesiaTTS();
   const chunks: Buffer[] = [];
   try {
