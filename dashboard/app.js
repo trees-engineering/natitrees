@@ -14,6 +14,18 @@ if ('serviceWorker' in navigator) {
 // ── Session sim counter ──────────────────────────────────────────
 let simCount = 0;
 
+// ── Count-up animation ───────────────────────────────────────────
+function animateNumber(el, target, duration = 700) {
+  const num = parseInt(target, 10);
+  if (isNaN(num)) { el.textContent = target; return; }
+  const start = Date.now();
+  (function tick() {
+    const p = Math.min((Date.now() - start) / duration, 1);
+    el.textContent = Math.round(num * (1 - Math.pow(1 - p, 3)));
+    if (p < 1) requestAnimationFrame(tick);
+  })();
+}
+
 // ═══════════════════════════════════════
 //  TAB NAVIGATION
 // ═══════════════════════════════════════
@@ -99,8 +111,10 @@ async function loadConfig() {
   const talents   = talentRes.status  === 'fulfilled' ? talentRes.value  : null;
 
   // Hero KPIs
-  document.getElementById('ov-calls').textContent  = assessments?.data?.length ?? '—';
-  document.getElementById('ov-talent').textContent = talents?.data?.length ?? '—';
+  const _callsEl  = document.getElementById('ov-calls');
+  const _talentEl = document.getElementById('ov-talent');
+  assessments?.data?.length != null ? animateNumber(_callsEl, assessments.data.length) : (_callsEl.textContent = '—');
+  talents?.data?.length     != null ? animateNumber(_talentEl, talents.data.length)    : (_talentEl.textContent = '—');
   document.getElementById('ov-server').textContent = health ? 'Online' : 'Offline';
 
   // System Health card
@@ -231,12 +245,16 @@ async function loadTranscripts() {
       const timeStr = date ? date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }) : '';
       const name = t._talent?.name ?? t.talent_id ?? 'Unknown';
       const lines = parseTranscript(t.transcript);
+      const snippet = t.ai_summary
+        ? `<div class="tx-snippet">${esc(t.ai_summary.length > 110 ? t.ai_summary.slice(0, 110) + '…' : t.ai_summary)}</div>`
+        : '';
       return `
         <div class="tx-card" id="tx-${i}">
           <button class="tx-header" onclick="toggleTranscript(${i})">
             <div class="tx-header-left">
               <div class="tx-name">${esc(name)}</div>
               <div class="tx-meta">${dateStr}${timeStr ? ` · ${timeStr}` : ''} <span class="tx-turns">${lines.length} turns</span></div>
+              ${snippet}
             </div>
             <span class="tx-chevron" id="tx-chev-${i}">▾</span>
           </button>
@@ -264,8 +282,10 @@ async function loadTranscripts() {
 function toggleTranscript(i) {
   const body  = document.getElementById(`tx-body-${i}`);
   const chev  = document.getElementById(`tx-chev-${i}`);
+  const card  = document.getElementById(`tx-${i}`);
   const open  = body.classList.toggle('tx-body-open');
   chev.style.transform = open ? 'rotate(180deg)' : '';
+  card.classList.toggle('tx-expanded', open);
 }
 
 // ═══════════════════════════════════════
@@ -305,9 +325,9 @@ async function loadKPIs() {
     const data = await res.json();
     if (data.error) throw new Error(data.error);
 
-    document.getElementById('kpi-total').textContent = data.total;
-    document.getElementById('kpi-week').textContent = data.thisWeek;
-    document.getElementById('kpi-lastweek').textContent = data.lastWeek;
+    animateNumber(document.getElementById('kpi-total'), data.total);
+    animateNumber(document.getElementById('kpi-week'), data.thisWeek);
+    animateNumber(document.getElementById('kpi-lastweek'), data.lastWeek);
 
     const trendEl = document.getElementById('kpi-trend');
     if (data.lastWeek === 0) {
@@ -323,15 +343,19 @@ async function loadKPIs() {
     const max = Math.max(...data.dailyCounts.map(d => d.count), 1);
     chart.innerHTML = data.dailyCounts.map(d => {
       const pct = Math.round((d.count / max) * 100);
+      const tip = `${d.date.slice(5)}: ${d.count} call${d.count !== 1 ? 's' : ''}`;
       return `
-        <div class="kpi-bar-wrap">
+        <div class="kpi-bar-wrap" data-tip="${esc(tip)}">
           <div class="kpi-bar-val">${d.count || ''}</div>
           <div class="kpi-bar-track">
-            <div class="kpi-bar" style="height:${pct}%"></div>
+            <div class="kpi-bar" data-pct="${pct}" style="height:0%"></div>
           </div>
           <div class="kpi-bar-label">${d.date.slice(5)}</div>
         </div>`;
     }).join('');
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      chart.querySelectorAll('.kpi-bar[data-pct]').forEach(b => { b.style.height = b.dataset.pct + '%'; });
+    }));
 
     const chCard = document.getElementById('kpi-channels');
     const entries = Object.entries(data.channels);
@@ -970,6 +994,62 @@ function initActiveBanner() {
     .catch(() => {});
 }
 
+// ═══════════════════════════════════════
+//  LIVE CALL STATUS (OVERVIEW CARD)
+// ═══════════════════════════════════════
+
+let liveCallTracked = null; // { callSid, name, startedAt }
+
+function initCallStatusCard() {
+  pollCallStatus();
+  setInterval(pollCallStatus, 5000);
+  setInterval(updateCallClock, 1000);
+}
+
+async function pollCallStatus() {
+  const card = document.getElementById('live-call-card');
+  if (!card) return;
+  try {
+    const res = await fetch('/api/dashboard/active-calls');
+    const { calls } = await res.json();
+    if (!calls || calls.length === 0) {
+      liveCallTracked = null;
+      card.innerHTML = `
+        <div class="live-call-idle">
+          <div class="live-call-idle-dot"></div>
+          <span class="live-call-idle-text">No active call</span>
+        </div>`;
+    } else {
+      const c = calls[0];
+      if (!liveCallTracked || liveCallTracked.callSid !== c.callSid) {
+        liveCallTracked = { callSid: c.callSid, name: c.candidateName, startedAt: Date.now() };
+      }
+      card.innerHTML = `
+        <div class="live-call-active">
+          <div class="live-call-pulse"></div>
+          <div class="live-call-info">
+            <div class="live-call-name">${esc(c.candidateName)}</div>
+            <div class="live-call-meta">In progress · <span id="live-call-elapsed">00:00</span></div>
+          </div>
+          <button class="live-call-goto-btn" onclick="switchTab('calls')">View</button>
+        </div>`;
+      updateCallClock();
+    }
+  } catch {
+    // silently keep last state
+  }
+}
+
+function updateCallClock() {
+  if (!liveCallTracked) return;
+  const el = document.getElementById('live-call-elapsed');
+  if (!el) return;
+  const secs = Math.floor((Date.now() - liveCallTracked.startedAt) / 1000);
+  const mm = String(Math.floor(secs / 60)).padStart(2, '0');
+  const ss = String(secs % 60).padStart(2, '0');
+  el.textContent = `${mm}:${ss}`;
+}
+
 function openCallModal(call) {
   pendingCall = call;
   document.getElementById('modal-name').textContent = call.name;
@@ -1134,6 +1214,7 @@ let promptHasOverride = false;
 async function loadPrompt() {
   if (promptLoaded) return;
   promptLoaded = true;
+  renderPromptHistory();
 
   const masterTA = document.getElementById('master-textarea');
   const secondaryTA = document.getElementById('secondary-textarea');
@@ -1176,6 +1257,7 @@ async function saveMasterPrompt() {
     promptHasOverride = true;
     badge.classList.add('visible');
     showToast('Master prompt saved');
+    await savePromptSnapshot(masterTA.value, secondaryTA.value);
   } catch (err) {
     showToast('Save failed: ' + String(err), true);
   } finally {
@@ -1219,6 +1301,7 @@ async function saveSecondaryPrompt() {
       secondary: secondaryTA.value,
     });
     showToast('Secondary prompt saved');
+    await savePromptSnapshot(masterTA.value, secondaryTA.value);
   } catch (err) {
     showToast('Save failed: ' + String(err), true);
   } finally {
@@ -1246,6 +1329,61 @@ function initPromptEditor() {
 }
 
 // ═══════════════════════════════════════
+//  PROMPT VERSION HISTORY
+// ═══════════════════════════════════════
+
+let promptVersionCache = [];
+
+async function savePromptSnapshot(master, secondary) {
+  try {
+    await fetch('/api/dashboard/prompt-versions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ master, secondary: secondary || '' }),
+    });
+  } catch {}
+  await renderPromptHistory();
+}
+
+async function renderPromptHistory() {
+  const card = document.getElementById('prompt-history-card');
+  if (!card) return;
+  try {
+    const res = await fetch('/api/dashboard/prompt-versions');
+    const { data } = await res.json();
+    promptVersionCache = data ?? [];
+    if (!promptVersionCache.length) {
+      card.innerHTML = `<div class="card-desc text-muted">No saves yet — save the prompt to start tracking versions.</div>`;
+      return;
+    }
+    card.innerHTML = promptVersionCache.map((entry, i) => {
+      const d = new Date(entry.created_at);
+      const dateStr = d.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+      const timeStr = d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+      const preview = entry.master.replace(/\n/g, ' ').slice(0, 90);
+      return `
+        <div class="ph-row">
+          <div class="ph-row-left">
+            <div class="ph-when">${dateStr} · ${timeStr}${i === 0 ? ' <span class="ph-latest">latest</span>' : ''}</div>
+            <div class="ph-preview">${esc(preview)}${entry.master.length > 90 ? '…' : ''}</div>
+          </div>
+          <button class="ph-restore-btn" onclick="restorePromptVersion(${i})">Restore</button>
+        </div>`;
+    }).join('');
+  } catch {
+    card.innerHTML = `<div class="card-desc text-muted">Could not load version history.</div>`;
+  }
+}
+
+function restorePromptVersion(i) {
+  const entry = promptVersionCache[i];
+  if (!entry) return;
+  document.getElementById('master-textarea').value = entry.master;
+  document.getElementById('secondary-textarea').value = entry.secondary;
+  showToast('Version loaded — edit if needed, then click Save to apply');
+}
+
+// ═══════════════════════════════════════
 //  UTILITIES
 // ═══════════════════════════════════════
 
@@ -1269,9 +1407,11 @@ function init() {
   initCalls();
   initActiveBanner();
   initPromptEditor();
+  initCallStatusCard();
   checkStatus();
   loadConfig();
   setInterval(checkStatus, 30_000);
+  setInterval(loadConfig, 60_000);
 }
 
 document.addEventListener('DOMContentLoaded', init);

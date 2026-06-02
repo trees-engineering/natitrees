@@ -690,6 +690,35 @@ export function registerDashboardRoutes(app: Express): void {
     }
   });
 
+  // Prompt version history — list last 10
+  app.get('/api/dashboard/prompt-versions', async (_req: Request, res: Response) => {
+    try {
+      const { data, error } = await supabase
+        .from('_prompt_versions')
+        .select('id, master, secondary, created_at')
+        .order('created_at', { ascending: false })
+        .limit(10);
+      if (error) throw error;
+      res.json({ data: data ?? [] });
+    } catch (err) {
+      res.json({ data: [], error: String(err) });
+    }
+  });
+
+  // Prompt version history — save a new snapshot
+  app.post('/api/dashboard/prompt-versions', async (req: Request, res: Response) => {
+    try {
+      const { master, secondary } = req.body as { master: string; secondary: string };
+      const { error } = await supabase
+        .from('_prompt_versions')
+        .insert({ master, secondary: secondary ?? '' });
+      if (error) throw error;
+      res.json({ ok: true });
+    } catch (err) {
+      res.status(500).json({ ok: false, error: String(err) });
+    }
+  });
+
   // Trigger manual call (name + phone provided directly, no DB lookup)
   app.post('/api/dashboard/call-manual', async (req: Request, res: Response) => {
     const { name, phone } = req.body as { name: string; phone: string };
