@@ -40,6 +40,7 @@ export async function initiateCall(to: string, candidateName: string, talentId: 
       : Promise.resolve({ data: [] }),
   ]);
 
+  console.log(`[returning-check] talentId=${talentId} data=${JSON.stringify(assessmentResult.data)} error=${JSON.stringify((assessmentResult as any).error)}`);
   const isReturning = !!(assessmentResult.data && assessmentResult.data.length > 0);
   registerCall(call.sid, { talentId, candidateName, isReturning });
   console.log(`[call] Calling ${candidateName} at ${to} — SID: ${call.sid} (returning=${isReturning})`);
