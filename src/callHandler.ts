@@ -99,12 +99,8 @@ export class CallHandler {
     const now = Date.now();
     console.log(`[barge-in] SpeechStarted received — agentSpeaking:${this.agentSpeaking} sinceLastInterrupt:${now - this.lastInterruptTime}ms sinceSpeakStart:${now - this.agentSpeakingStart}ms`);
 
-    if (now - this.lastInterruptTime < 1000) {
+    if (now - this.lastInterruptTime < 500) {
       console.log('[barge-in] Skipped — cooldown active');
-      return;
-    }
-    if (now - this.agentSpeakingStart < 200) {
-      console.log('[barge-in] Skipped — agent just started speaking');
       return;
     }
 

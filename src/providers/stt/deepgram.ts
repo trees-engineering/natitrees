@@ -5,7 +5,7 @@ const DEEPGRAM_URL =
   'wss://api.deepgram.com/v2/listen?' +
   'encoding=mulaw&sample_rate=8000' +
   '&model=flux-general-multi' +
-  '&eot_timeout_ms=1500';
+  '&eot_timeout_ms=1200';
 
 export class DeepgramSTT implements STTProvider {
   private ws: WebSocket;
