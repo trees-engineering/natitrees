@@ -1798,7 +1798,7 @@ body:has(.active-call-banner.visible) .app-main { padding-top: calc(var(--header
   padding: 8px 12px;
   border: 1px solid var(--border);
   border-radius: 8px;
-  background: var(--bg-card);
+  background: #ffffff;
   color: var(--text-1);
   font-size: 13px;
   font-family: var(--sans);
@@ -1920,7 +1920,7 @@ body:has(.active-call-banner.visible) .app-main { padding-top: calc(var(--header
   padding: 20px;
 }
 .ph-modal {
-  background: var(--bg-card);
+  background: #ffffff;
   border: 1px solid var(--border);
   border-radius: 14px;
   width: 100%;
@@ -1946,14 +1946,16 @@ body:has(.active-call-banner.visible) .app-main { padding-top: calc(var(--header
 .ph-modal-close {
   background: none;
   border: none;
-  color: var(--text-3);
-  font-size: 16px;
+  color: #ffffff;
+  background: var(--red);
+  font-size: 13px;
+  font-weight: 700;
   cursor: pointer;
-  padding: 2px 6px;
+  padding: 4px 9px;
   border-radius: 6px;
-  transition: color 0.15s;
+  transition: opacity 0.15s;
 }
-.ph-modal-close:hover { color: var(--text-1); }
+.ph-modal-close:hover { opacity: 0.8; }
 .ph-modal-section-label {
   font-size: 10px;
   font-weight: 800;
@@ -1967,7 +1969,7 @@ body:has(.active-call-banner.visible) .app-main { padding-top: calc(var(--header
   font-family: var(--mono);
   font-size: 12px;
   color: var(--text-2);
-  background: var(--bg-page);
+  background: var(--bg);
   border-radius: 8px;
   margin: 0 20px 0;
   padding: 12px;
