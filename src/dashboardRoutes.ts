@@ -696,7 +696,7 @@ export function registerDashboardRoutes(app: Express): void {
     try {
       const { data, error } = await supabase
         .from('_prompt_versions')
-        .select('id, master, secondary, created_at')
+        .select('id, master, secondary, label, version_number, created_at')
         .order('created_at', { ascending: false });
       if (error) throw error;
       res.json({ data: data ?? [] });
@@ -708,10 +708,24 @@ export function registerDashboardRoutes(app: Express): void {
   // Prompt version history — save a new snapshot
   app.post('/api/dashboard/prompt-versions', async (req: Request, res: Response) => {
     try {
-      const { master, secondary } = req.body as { master: string; secondary: string };
+      const { master, secondary, label } = req.body as { master: string; secondary: string; label?: string };
+      const { count } = await supabase.from('_prompt_versions').select('*', { count: 'exact', head: true });
+      const version_number = (count ?? 0) + 1;
       const { error } = await supabase
         .from('_prompt_versions')
-        .insert({ master, secondary: secondary ?? '' });
+        .insert({ master, secondary: secondary ?? '', label: label ?? '', version_number });
+      if (error) throw error;
+      res.json({ ok: true });
+    } catch (err) {
+      res.status(500).json({ ok: false, error: String(err) });
+    }
+  });
+
+  // Prompt version history — delete a snapshot
+  app.delete('/api/dashboard/prompt-versions/:id', async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const { error } = await supabase.from('_prompt_versions').delete().eq('id', id);
       if (error) throw error;
       res.json({ ok: true });
     } catch (err) {

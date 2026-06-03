@@ -557,11 +557,32 @@
       <div class="prompt-block-header" style="margin-top:24px">
         <div>
           <div class="prompt-block-title">Version History</div>
-          <div class="prompt-block-desc">Snapshots saved each time you click Save. Click Restore to load a version — you'll still need to save it.</div>
+          <div class="prompt-block-desc">Snapshots saved each time you click Save. Add a label so you know what changed.</div>
         </div>
+      </div>
+      <div class="ph-label-row">
+        <input type="text" id="prompt-version-label" class="ph-label-input" placeholder="Label this save (optional)… e.g. Added Treelance questions" maxlength="80">
       </div>
       <div class="card" id="prompt-history-card" style="margin-bottom:0">
         <div class="card-desc text-muted">No saves yet.</div>
+      </div>
+
+      <!-- Prompt version view modal -->
+      <div id="ph-modal-backdrop" class="ph-modal-backdrop" style="display:none" onclick="closePromptVersionModal()">
+        <div class="ph-modal" onclick="event.stopPropagation()">
+          <div class="ph-modal-header">
+            <span id="ph-modal-title" class="ph-modal-title"></span>
+            <button class="ph-modal-close" onclick="closePromptVersionModal()">✕</button>
+          </div>
+          <div class="ph-modal-section-label">Master Prompt</div>
+          <pre id="ph-modal-master" class="ph-modal-pre"></pre>
+          <div class="ph-modal-section-label" id="ph-modal-secondary-label">Secondary Prompt</div>
+          <pre id="ph-modal-secondary" class="ph-modal-pre"></pre>
+          <div class="ph-modal-footer">
+            <button class="prompt-btn-ghost" onclick="closePromptVersionModal()">Close</button>
+            <button class="prompt-btn-save" id="ph-modal-restore-btn" onclick="restoreFromModal()">Restore this version</button>
+          </div>
+        </div>
       </div>
 
     </div>

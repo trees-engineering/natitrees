@@ -1388,16 +1388,43 @@ function initPromptEditor() {
 // ═══════════════════════════════════════
 
 let promptVersionCache = [];
+let phModalIndex = null;
 
 async function savePromptSnapshot(master, secondary) {
+  const labelInput = document.getElementById('prompt-version-label');
+  const label = labelInput ? labelInput.value.trim() : '';
   try {
     await fetch('/api/dashboard/prompt-versions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ master, secondary: secondary || '' }),
+      body: JSON.stringify({ master, secondary: secondary || '', label }),
     });
+    if (labelInput) labelInput.value = '';
   } catch {}
   await renderPromptHistory();
+}
+
+function buildPhRows(limit) {
+  return promptVersionCache.slice(0, limit).map((entry, i) => {
+    const d = new Date(entry.created_at);
+    const dateStr = d.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+    const timeStr = d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+    const vNum = entry.version_number ? `<span class="ph-vnum">v${entry.version_number}</span>` : '';
+    const labelTxt = entry.label ? `<span class="ph-entry-label">${esc(entry.label)}</span>` : '';
+    const latestBadge = i === 0 ? ' <span class="ph-latest">latest</span>' : '';
+    const preview = entry.master.replace(/\n/g, ' ').slice(0, 80);
+    return `
+      <div class="ph-row">
+        <div class="ph-row-left">
+          <div class="ph-when">${vNum}${labelTxt}${latestBadge}</div>
+          <div class="ph-preview">${dateStr} · ${timeStr} · ${esc(preview)}${entry.master.length > 80 ? '…' : ''}</div>
+        </div>
+        <div class="ph-row-actions">
+          <button class="ph-view-btn" onclick="openPromptVersionModal(${i})">View</button>
+          <button class="ph-delete-btn" onclick="deletePromptVersion('${entry.id}', ${i})">Delete</button>
+        </div>
+      </div>`;
+  }).join('');
 }
 
 async function renderPromptHistory() {
@@ -1415,25 +1442,8 @@ async function renderPromptHistory() {
     const total = promptVersionCache.length;
     const hasMore = total > VISIBLE;
 
-    function buildRows(limit) {
-      return promptVersionCache.slice(0, limit).map((entry, i) => {
-        const d = new Date(entry.created_at);
-        const dateStr = d.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
-        const timeStr = d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
-        const preview = entry.master.replace(/\n/g, ' ').slice(0, 90);
-        return `
-          <div class="ph-row">
-            <div class="ph-row-left">
-              <div class="ph-when">${dateStr} · ${timeStr}${i === 0 ? ' <span class="ph-latest">latest</span>' : ''}</div>
-              <div class="ph-preview">${esc(preview)}${entry.master.length > 90 ? '…' : ''}</div>
-            </div>
-            <button class="ph-restore-btn" onclick="restorePromptVersion(${i})">Restore</button>
-          </div>`;
-      }).join('');
-    }
-
     function render(showAll) {
-      const rows = buildRows(showAll ? total : VISIBLE);
+      const rows = buildPhRows(showAll ? total : VISIBLE);
       const toggleBtn = hasMore
         ? `<button class="ph-toggle-btn" onclick="togglePromptHistory(${showAll})">${showAll ? 'Show less' : `Show all ${total} versions`}</button>`
         : '';
@@ -1451,36 +1461,59 @@ function togglePromptHistory(currentlyShowingAll) {
   if (!card) return;
   const VISIBLE = 5;
   const total = promptVersionCache.length;
-
-  function buildRows(limit) {
-    return promptVersionCache.slice(0, limit).map((entry, i) => {
-      const d = new Date(entry.created_at);
-      const dateStr = d.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
-      const timeStr = d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
-      const preview = entry.master.replace(/\n/g, ' ').slice(0, 90);
-      return `
-        <div class="ph-row">
-          <div class="ph-row-left">
-            <div class="ph-when">${dateStr} · ${timeStr}${i === 0 ? ' <span class="ph-latest">latest</span>' : ''}</div>
-            <div class="ph-preview">${esc(preview)}${entry.master.length > 90 ? '…' : ''}</div>
-          </div>
-          <button class="ph-restore-btn" onclick="restorePromptVersion(${i})">Restore</button>
-        </div>`;
-    }).join('');
-  }
-
   const showAll = !currentlyShowingAll;
-  const rows = buildRows(showAll ? total : VISIBLE);
+  const rows = buildPhRows(showAll ? total : VISIBLE);
   const toggleBtn = `<button class="ph-toggle-btn" onclick="togglePromptHistory(${showAll})">${showAll ? 'Show less' : `Show all ${total} versions`}</button>`;
   card.innerHTML = rows + toggleBtn;
 }
 
-function restorePromptVersion(i) {
+function openPromptVersionModal(i) {
   const entry = promptVersionCache[i];
+  if (!entry) return;
+  phModalIndex = i;
+  const vLabel = entry.version_number ? `v${entry.version_number}` : '';
+  const titleParts = [vLabel, entry.label].filter(Boolean);
+  document.getElementById('ph-modal-title').textContent = titleParts.join(' · ') || 'Prompt Version';
+  document.getElementById('ph-modal-master').textContent = entry.master;
+  const secPre = document.getElementById('ph-modal-secondary');
+  const secLabel = document.getElementById('ph-modal-secondary-label');
+  if (entry.secondary && entry.secondary.trim()) {
+    secPre.textContent = entry.secondary;
+    secPre.style.display = '';
+    secLabel.style.display = '';
+  } else {
+    secPre.style.display = 'none';
+    secLabel.style.display = 'none';
+  }
+  document.getElementById('ph-modal-backdrop').style.display = 'flex';
+}
+
+function closePromptVersionModal() {
+  document.getElementById('ph-modal-backdrop').style.display = 'none';
+  phModalIndex = null;
+}
+
+function restoreFromModal() {
+  const entry = promptVersionCache[phModalIndex];
   if (!entry) return;
   document.getElementById('master-textarea').value = entry.master;
   document.getElementById('secondary-textarea').value = entry.secondary;
+  closePromptVersionModal();
   showToast('Version loaded — edit if needed, then click Save to apply');
+}
+
+async function deletePromptVersion(id, i) {
+  const entry = promptVersionCache[i];
+  const label = entry?.label || (entry?.version_number ? `v${entry.version_number}` : 'this version');
+  if (!confirm(`Delete ${label}? This cannot be undone.`)) return;
+  try {
+    const res = await fetch(`/api/dashboard/prompt-versions/${id}`, { method: 'DELETE' });
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error);
+    await renderPromptHistory();
+  } catch (err) {
+    showToast('Delete failed: ' + String(err), true);
+  }
 }
 
 // ═══════════════════════════════════════

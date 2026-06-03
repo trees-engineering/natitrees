@@ -1789,6 +1789,25 @@ body:has(.active-call-banner.visible) .app-main { padding-top: calc(var(--header
 .live-call-goto-btn:hover { background: var(--navy-dim); }
 
 /* ─── Prompt Version History ─────────────────────────────────── */
+.ph-label-row {
+  margin-bottom: 8px;
+}
+.ph-label-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-card);
+  color: var(--text-1);
+  font-size: 13px;
+  font-family: var(--sans);
+  outline: none;
+  transition: border-color 0.15s;
+}
+.ph-label-input:focus { border-color: var(--border-active); }
+.ph-label-input::placeholder { color: var(--text-3); }
+
 .ph-row {
   display: flex;
   align-items: center;
@@ -1804,6 +1823,25 @@ body:has(.active-call-banner.visible) .app-main { padding-top: calc(var(--header
   font-weight: 700;
   color: var(--text-2);
   font-family: var(--mono);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.ph-vnum {
+  font-size: 10px;
+  font-weight: 800;
+  font-family: var(--mono);
+  color: var(--navy-light);
+  background: var(--navy-pale);
+  padding: 1px 6px;
+  border-radius: 100px;
+}
+.ph-entry-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-1);
+  font-family: var(--sans);
 }
 .ph-latest {
   display: inline-block;
@@ -1815,7 +1853,6 @@ body:has(.active-call-banner.visible) .app-main { padding-top: calc(var(--header
   border-radius: 100px;
   background: var(--green-dim);
   color: var(--green);
-  margin-left: 6px;
   vertical-align: middle;
 }
 .ph-preview {
@@ -1825,7 +1862,12 @@ body:has(.active-call-banner.visible) .app-main { padding-top: calc(var(--header
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.ph-restore-btn {
+.ph-row-actions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.ph-view-btn {
   background: none;
   border: 1px solid var(--border);
   color: var(--navy-light);
@@ -1835,10 +1877,22 @@ body:has(.active-call-banner.visible) .app-main { padding-top: calc(var(--header
   font-weight: 600;
   cursor: pointer;
   white-space: nowrap;
-  flex-shrink: 0;
   transition: background 0.15s;
 }
-.ph-restore-btn:hover { background: var(--navy-pale); }
+.ph-view-btn:hover { background: var(--navy-pale); }
+.ph-delete-btn {
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--text-3);
+  border-radius: 7px;
+  padding: 5px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.ph-delete-btn:hover { background: #fff0f0; color: #c0392b; border-color: #f5c6cb; }
 .ph-toggle-btn {
   display: block;
   width: 100%;
@@ -1853,3 +1907,82 @@ body:has(.active-call-banner.visible) .app-main { padding-top: calc(var(--header
   transition: color 0.15s, border-color 0.15s;
 }
 .ph-toggle-btn:hover { color: var(--text-1); border-color: var(--border-active); }
+
+/* Prompt version modal */
+.ph-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.45);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.ph-modal {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  width: 100%;
+  max-width: 680px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.18);
+}
+.ph-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px 12px;
+  border-bottom: 1px solid var(--border-sub);
+  flex-shrink: 0;
+}
+.ph-modal-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-1);
+}
+.ph-modal-close {
+  background: none;
+  border: none;
+  color: var(--text-3);
+  font-size: 16px;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 6px;
+  transition: color 0.15s;
+}
+.ph-modal-close:hover { color: var(--text-1); }
+.ph-modal-section-label {
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--text-3);
+  padding: 12px 20px 4px;
+  flex-shrink: 0;
+}
+.ph-modal-pre {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--text-2);
+  background: var(--bg-page);
+  border-radius: 8px;
+  margin: 0 20px 0;
+  padding: 12px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  flex: 1;
+  min-height: 0;
+  max-height: 280px;
+}
+.ph-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 14px 20px;
+  border-top: 1px solid var(--border-sub);
+  flex-shrink: 0;
+}
