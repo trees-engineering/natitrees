@@ -65,8 +65,13 @@ function initSubTabs() {
   btns.forEach(btn => {
     btn.addEventListener('click', () => {
       btns.forEach(b => b.classList.toggle('active', b === btn));
-      document.getElementById('subtab-builtin').style.display = btn.dataset.subtab === 'builtin' ? '' : 'none';
-      document.getElementById('subtab-custom').style.display = btn.dataset.subtab === 'custom' ? '' : 'none';
+      const st = btn.dataset.subtab;
+      document.getElementById('subtab-builtin').style.display = st === 'builtin' ? '' : 'none';
+      document.getElementById('subtab-custom').style.display  = st === 'custom'  ? '' : 'none';
+      document.getElementById('subtab-voice').style.display   = st === 'voice'   ? '' : 'none';
+      // hide run button and sim output when on voice tab
+      document.getElementById('run-btn').style.display    = st === 'voice' ? 'none' : '';
+      document.getElementById('sim-output').style.display = st === 'voice' ? 'none' : '';
       updateRunBtn();
     });
   });
@@ -1541,6 +1546,7 @@ function init() {
   initActiveBanner();
   initPromptEditor();
   initCallStatusCard();
+  initVoiceTest();
   checkStatus();
   loadConfig();
   setInterval(checkStatus, 30_000);
@@ -1548,3 +1554,247 @@ function init() {
 }
 
 document.addEventListener('DOMContentLoaded', init);
+
+// ═══════════════════════════════════════
+//  VOICE TEST
+// ═══════════════════════════════════════
+
+let voiceWs = null;
+let micStream = null;
+let micAudioCtx = null;
+let audioWorkletNode = null;
+let voiceSessionActive = false;
+
+// ── Playback queue ───────────────────────────────────────────────
+let playbackCtx = null;
+let audioQueue = [];
+let isPlaying = false;
+let currentSource = null;
+
+function ensurePlaybackCtx() {
+  if (!playbackCtx || playbackCtx.state === 'closed') {
+    playbackCtx = new AudioContext();
+  }
+  if (playbackCtx.state === 'suspended') playbackCtx.resume();
+}
+
+async function enqueueAudio(arrayBuffer) {
+  ensurePlaybackCtx();
+  try {
+    const decoded = await playbackCtx.decodeAudioData(arrayBuffer);
+    audioQueue.push(decoded);
+    setVoiceStatus('Agent speaking…', 'speaking');
+    if (!isPlaying) playNext();
+  } catch (e) {
+    console.warn('[voice] Could not decode audio:', e);
+  }
+}
+
+function playNext() {
+  if (!audioQueue.length) {
+    isPlaying = false;
+    currentSource = null;
+    if (voiceSessionActive) setVoiceStatus('Listening…', 'listening');
+    return;
+  }
+  isPlaying = true;
+  const buffer = audioQueue.shift();
+  const src = playbackCtx.createBufferSource();
+  src.buffer = buffer;
+  src.connect(playbackCtx.destination);
+  src.onended = playNext;
+  currentSource = src;
+  src.start();
+}
+
+function clearAudioQueue() {
+  audioQueue = [];
+  if (currentSource) {
+    try { currentSource.stop(); } catch {}
+    currentSource = null;
+  }
+  isPlaying = false;
+}
+
+// ── UI helpers ───────────────────────────────────────────────────
+function setVoiceStatus(text, state) {
+  const el = document.getElementById('voice-status');
+  const dot = document.getElementById('voice-status-dot');
+  if (el) el.textContent = text;
+  if (dot) dot.className = 'voice-status-dot' + (state ? ' vsd-' + state : '');
+}
+
+function setMicBtn(label, icon, active) {
+  const btn = document.getElementById('voice-mic-btn');
+  const lbl = document.getElementById('voice-mic-label');
+  const ico = document.getElementById('voice-mic-icon');
+  if (lbl) lbl.textContent = label;
+  if (ico) ico.textContent = icon;
+  if (btn) btn.classList.toggle('voice-mic-active', !!active);
+}
+
+function appendVoiceLine(role, text) {
+  const box = document.getElementById('voice-transcript');
+  if (!box) return;
+  const empty = box.querySelector('.empty-state');
+  if (empty) empty.remove();
+  const line = document.createElement('div');
+  line.className = 'voice-turn ' + (role === 'agent' ? 'vt-agent' : 'vt-user');
+  line.innerHTML = `
+    <div class="vt-label">${role === 'agent' ? '🌿 Treelance' : '👤 You'}</div>
+    <div class="vt-bubble">${esc(text)}</div>`;
+  box.appendChild(line);
+  box.scrollTop = box.scrollHeight;
+}
+
+// ── Session lifecycle ────────────────────────────────────────────
+async function startVoiceSession() {
+  const mode = document.querySelector('.voice-mode-btn.active')?.dataset.mode ?? 'custom';
+  const name = (document.getElementById('voice-test-name')?.value || '').trim() || 'Test User';
+  const talentId = mode === 'db' ? (document.getElementById('voice-candidate-select')?.value || '') : '';
+
+  setVoiceStatus('Requesting mic…', '');
+  try {
+    micStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+  } catch {
+    setVoiceStatus('Mic permission denied', 'error');
+    return;
+  }
+
+  // Create both AudioContexts here — inside the user gesture chain — so browsers
+  // don't block them under the autoplay policy.
+  ensurePlaybackCtx();
+  micAudioCtx = new AudioContext({ sampleRate: 48000 });
+
+  const wsProto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+  voiceWs = new WebSocket(`${wsProto}//${location.host}/browser-voice`);
+  voiceWs.binaryType = 'arraybuffer';
+
+  voiceWs.onopen = async () => {
+    const startMsg = talentId ? { type: 'start', talentId } : { type: 'start', candidateName: name };
+    voiceWs.send(JSON.stringify(startMsg));
+
+    // Set up AudioWorklet mic capture
+    await micAudioCtx.audioWorklet.addModule('/dashboard/audio-processor.js');
+    const source = micAudioCtx.createMediaStreamSource(micStream);
+    audioWorkletNode = new AudioWorkletNode(micAudioCtx, 'audio-processor');
+    audioWorkletNode.port.onmessage = (e) => {
+      if (voiceWs && voiceWs.readyState === WebSocket.OPEN) {
+        voiceWs.send(e.data);
+      }
+    };
+    source.connect(audioWorkletNode);
+
+    voiceSessionActive = true;
+    setMicBtn('End Session', '⏹', true);
+    setVoiceStatus('Connecting…', '');
+
+    // Reset transcript
+    const box = document.getElementById('voice-transcript');
+    if (box) box.innerHTML = '<div class="empty-state"><div class="empty-icon">🌿</div><div class="empty-msg">Treelance is about to speak…</div></div>';
+  };
+
+  voiceWs.onmessage = async (e) => {
+    if (e.data instanceof ArrayBuffer) {
+      await enqueueAudio(e.data.slice(0));
+    } else {
+      try {
+        const msg = JSON.parse(e.data);
+        if (msg.type === 'transcript') {
+          appendVoiceLine('user', msg.text);
+          setVoiceStatus('Thinking…', 'thinking');
+        } else if (msg.type === 'agent') {
+          appendVoiceLine('agent', msg.text);
+        } else if (msg.type === 'clear') {
+          clearAudioQueue();
+          setVoiceStatus('Listening…', 'listening');
+        } else if (msg.type === 'session_end') {
+          setVoiceStatus('Call ended by agent', '');
+          setTimeout(stopVoiceSession, 3000);
+        }
+      } catch {}
+    }
+  };
+
+  voiceWs.onclose = () => {
+    if (voiceSessionActive) stopVoiceSession();
+  };
+
+  voiceWs.onerror = () => {
+    setVoiceStatus('Connection error', 'error');
+    stopVoiceSession();
+  };
+}
+
+function stopVoiceSession() {
+  voiceSessionActive = false;
+
+  if (voiceWs) {
+    if (voiceWs.readyState === WebSocket.OPEN) {
+      voiceWs.send(JSON.stringify({ type: 'end' }));
+    }
+    voiceWs.close();
+    voiceWs = null;
+  }
+
+  if (micStream) {
+    micStream.getTracks().forEach(t => t.stop());
+    micStream = null;
+  }
+
+  if (micAudioCtx) {
+    micAudioCtx.close().catch(() => {});
+    micAudioCtx = null;
+    audioWorkletNode = null;
+  }
+
+  clearAudioQueue();
+  setMicBtn('Start Session', '🎤', false);
+  setVoiceStatus('Ready — click to start', '');
+}
+
+let voiceCandidatesLoaded = false;
+
+async function loadVoiceCandidates() {
+  if (voiceCandidatesLoaded) return;
+  voiceCandidatesLoaded = true;
+  const sel = document.getElementById('voice-candidate-select');
+  if (!sel) return;
+  try {
+    const res = await fetch('/api/dashboard/candidates');
+    const { data } = await res.json();
+    const candidates = data ?? [];
+    sel.innerHTML = '<option value="">— select a candidate —</option>' +
+      candidates.map(c => `<option value="${esc(c.id)}">${esc(c.name ?? c.id)}</option>`).join('');
+    sel.addEventListener('change', () => {
+      const meta = document.getElementById('voice-candidate-meta');
+      if (!meta) return;
+      const opt = sel.options[sel.selectedIndex];
+      meta.textContent = opt.value ? `ID: ${opt.value}` : '';
+    });
+  } catch {
+    sel.innerHTML = '<option value="">— could not load candidates —</option>';
+  }
+}
+
+function initVoiceTest() {
+  document.getElementById('voice-mic-btn')?.addEventListener('click', () => {
+    if (voiceSessionActive) {
+      stopVoiceSession();
+    } else {
+      startVoiceSession();
+    }
+  });
+
+  // Mode toggle
+  document.querySelectorAll('.voice-mode-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.voice-mode-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const isDb = btn.dataset.mode === 'db';
+      document.getElementById('voice-custom-row').style.display = isDb ? 'none' : '';
+      document.getElementById('voice-db-row').style.display    = isDb ? '' : 'none';
+      if (isDb) loadVoiceCandidates();
+    });
+  });
+}

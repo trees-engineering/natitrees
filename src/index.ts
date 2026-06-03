@@ -4,6 +4,7 @@ import express from 'express';
 import { createServer } from 'http';
 import { WebSocketServer } from 'ws';
 import { CallHandler } from './callHandler';
+import { BrowserCallHandler } from './browserCallHandler';
 import { initiateCall, endCall } from './callController';
 import { removeCall } from './callStore';
 import { loadProfile } from './interview/profileLoader';
@@ -87,10 +88,30 @@ app.post('/call', async (req, res) => {
 });
 
 const server = createServer(app);
-const wss = new WebSocketServer({ server, path: '/media-stream' });
+
+// noServer mode so we can route upgrade events by path manually —
+// attaching two WebSocketServers with `path` to the same HTTP server conflicts.
+const wss = new WebSocketServer({ noServer: true });
 wss.on('connection', (ws) => {
   console.log('[server] New call WebSocket connected');
   new CallHandler(ws);
+});
+
+const browserWss = new WebSocketServer({ noServer: true });
+browserWss.on('connection', (ws) => {
+  console.log('[server] New browser voice session connected');
+  new BrowserCallHandler(ws);
+});
+
+server.on('upgrade', (req, socket, head) => {
+  const pathname = new URL(req.url ?? '/', `http://${req.headers.host}`).pathname;
+  if (pathname === '/media-stream') {
+    wss.handleUpgrade(req, socket, head, (ws) => wss.emit('connection', ws, req));
+  } else if (pathname === '/browser-voice') {
+    browserWss.handleUpgrade(req, socket, head, (ws) => browserWss.emit('connection', ws, req));
+  } else {
+    socket.destroy();
+  }
 });
 
 const PORT = process.env.PORT ?? 3000;

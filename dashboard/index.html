@@ -421,10 +421,11 @@
         No phone call required — the LLM plays both sides.
       </div>
 
-      <!-- Sub-tabs: built-in / custom -->
+      <!-- Sub-tabs: built-in / custom / voice -->
       <div class="sub-tabs">
         <button class="sub-tab active" data-subtab="builtin">Built-in Scenarios</button>
         <button class="sub-tab" data-subtab="custom">Custom Scenario</button>
+        <button class="sub-tab" data-subtab="voice">🎤 Voice Test</button>
       </div>
 
       <!-- Built-in panel -->
@@ -477,6 +478,51 @@
           <input class="field-input save-scenario-title-input" id="custom-title" type="text"
             placeholder="Scenario title to save (e.g. Senior PM, guarded)" maxlength="60">
           <button class="save-scenario-btn" id="save-scenario-btn" disabled>Save to Built-in List</button>
+        </div>
+      </div>
+
+      <!-- Voice Test panel -->
+      <div id="subtab-voice" style="display:none">
+        <div class="voice-panel">
+
+          <!-- Mode toggle -->
+          <div class="voice-mode-row">
+            <button class="voice-mode-btn active" data-mode="custom" id="voice-mode-custom">Custom Name</button>
+            <button class="voice-mode-btn" data-mode="db" id="voice-mode-db">From Database</button>
+          </div>
+
+          <!-- Custom name input -->
+          <div id="voice-custom-row" class="voice-name-row">
+            <label class="field-label" for="voice-test-name">Your name for this test</label>
+            <input class="field-input" id="voice-test-name" type="text" placeholder="e.g. John" maxlength="50" value="Test User">
+          </div>
+
+          <!-- Database candidate dropdown -->
+          <div id="voice-db-row" class="voice-name-row" style="display:none">
+            <label class="field-label" for="voice-candidate-select">Select candidate</label>
+            <div class="scenario-select-wrap">
+              <select class="field-input" id="voice-candidate-select">
+                <option value="">— loading candidates… —</option>
+              </select>
+            </div>
+            <div class="voice-candidate-meta" id="voice-candidate-meta"></div>
+          </div>
+          <div class="voice-controls">
+            <button class="voice-mic-btn" id="voice-mic-btn">
+              <span class="voice-mic-icon" id="voice-mic-icon">🎤</span>
+              <span id="voice-mic-label">Start Session</span>
+            </button>
+            <div class="voice-status-wrap">
+              <div class="voice-status-dot" id="voice-status-dot"></div>
+              <span class="voice-status-text" id="voice-status">Ready — click to start</span>
+            </div>
+          </div>
+          <div class="voice-transcript" id="voice-transcript">
+            <div class="empty-state">
+              <div class="empty-icon">🎤</div>
+              <div class="empty-msg">Start a session to speak with the agent in real time</div>
+            </div>
+          </div>
         </div>
       </div>
 

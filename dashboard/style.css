@@ -1988,3 +1988,178 @@ body:has(.active-call-banner.visible) .app-main { padding-top: calc(var(--header
   border-top: 1px solid var(--border-sub);
   flex-shrink: 0;
 }
+
+/* ═══════════════════════════════════════════════════════════
+   VOICE TEST
+   ═══════════════════════════════════════════════════════════ */
+
+.voice-panel {
+  margin-top: 16px;
+}
+
+.voice-mode-row {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+
+.voice-mode-btn {
+  padding: 6px 16px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-2);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.voice-mode-btn.active {
+  background: var(--navy);
+  color: #fff;
+  border-color: var(--navy);
+}
+
+.voice-name-row {
+  margin-bottom: 16px;
+}
+
+.voice-candidate-meta {
+  font-size: 11px;
+  color: var(--text-3);
+  margin-top: 4px;
+}
+
+.voice-controls {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.voice-mic-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 24px;
+  background: var(--navy);
+  color: #fff;
+  border: none;
+  border-radius: 50px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.1s;
+  white-space: nowrap;
+}
+.voice-mic-btn:hover {
+  background: var(--navy-mid);
+}
+.voice-mic-btn:active {
+  transform: scale(0.97);
+}
+.voice-mic-btn.voice-mic-active {
+  background: var(--red);
+}
+.voice-mic-btn.voice-mic-active:hover {
+  background: #9a2525;
+}
+
+.voice-mic-icon {
+  font-size: 18px;
+  line-height: 1;
+}
+
+.voice-status-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.voice-status-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--text-4);
+  flex-shrink: 0;
+  transition: background 0.2s;
+}
+.voice-status-dot.vsd-listening {
+  background: var(--green);
+  animation: voice-pulse 1.6s ease-in-out infinite;
+}
+.voice-status-dot.vsd-speaking {
+  background: var(--gold);
+  animation: voice-pulse 0.8s ease-in-out infinite;
+}
+.voice-status-dot.vsd-thinking {
+  background: var(--navy-light);
+  animation: voice-pulse 1s ease-in-out infinite;
+}
+.voice-status-dot.vsd-error {
+  background: var(--red);
+}
+
+@keyframes voice-pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.35; }
+}
+
+.voice-status-text {
+  font-size: 13px;
+  color: var(--text-2);
+}
+
+.voice-transcript {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  min-height: 200px;
+  max-height: 420px;
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.voice-turn {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.vt-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-3);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.vt-bubble {
+  padding: 10px 14px;
+  border-radius: 10px;
+  font-size: 14px;
+  line-height: 1.5;
+  max-width: 90%;
+}
+
+.vt-agent .vt-label { color: var(--green); }
+.vt-agent .vt-bubble {
+  background: var(--green-dim);
+  color: var(--text);
+  align-self: flex-start;
+  border-bottom-left-radius: 2px;
+}
+
+.vt-user .vt-label { color: var(--navy-light); text-align: right; }
+.vt-user .vt-bubble {
+  background: var(--navy-pale);
+  color: var(--text);
+  align-self: flex-end;
+  border-bottom-right-radius: 2px;
+}
+.vt-user {
+  align-items: flex-end;
+}
