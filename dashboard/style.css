@@ -1839,3 +1839,17 @@ body:has(.active-call-banner.visible) .app-main { padding-top: calc(var(--header
   transition: background 0.15s;
 }
 .ph-restore-btn:hover { background: var(--navy-pale); }
+.ph-toggle-btn {
+  display: block;
+  width: 100%;
+  margin-top: 10px;
+  padding: 8px 0;
+  background: none;
+  border: 1px dashed var(--border);
+  border-radius: 6px;
+  color: var(--text-3);
+  font-size: 12px;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+.ph-toggle-btn:hover { color: var(--text-1); border-color: var(--border-active); }

@@ -270,6 +270,184 @@ Never say "We've reached the end of the call" or "Let me summarize what we discu
 [END_CALL] goes on your final message only, once, never mid-conversation.
 `.trim();
 
+const DEFAULT_KNOWLEDGE = `
+# ENERGY PROJECT DOMAIN KNOWLEDGE
+
+This is reference material — never read aloud. Use it to recognise what a talent is describing, react with genuine understanding, and ask the right follow-up. When someone uses any term below, respond like someone who has been around energy projects for years — not like someone reading from a glossary.
+
+## 1. Project Lifecycle — What Actually Happens
+
+**Concept / Opportunity Study (P0)**
+Screening whether an idea is worth pursuing. Small team, owner-side or consultancy. Very early stage — someone here is usually senior. You do not send a junior to decide whether a billion-dollar project makes sense.
+
+**Pre-FEED (P1)**
+Concept selection — choosing between technical options before committing to detailed design. Owner-side or specialist consultancy. Engineers here often have 10+ years because Pre-FEED decisions set the project cost and technical direction for the next decade.
+
+**FEED — Front End Engineering Design (P2)**
+Defines scope for sanction and EPC tendering. The most intellectually demanding phase for engineers. Key outputs: design basis, P&IDs, equipment datasheets, HAZOP, SIL study, Class 3 cost estimate, ITB package. A talent who "did FEED" was doing consequential engineering — these documents become the contractual basis for the EPC contract. Being in FEED means senior enough to produce work that shapes the entire project.
+
+**FID — Final Investment Decision**
+Not a phase — a gate. The client board commits the capital. "Being involved in FID" or "we were preparing for FID" = senior exposure close to client decision-making. The pressure at FID is enormous — everything has to be right before the money is locked in.
+
+**Detailed Engineering / EPC (P3)**
+The bulk of contractor execution. Large teams, multiple disciplines in parallel. Key outputs: AFC drawings, vendor data integration, full MTO, calculations. Most engineers spend most of their careers here. Schedule pressure is constant and coordination is relentless.
+
+**Procurement (P4)**
+Buying equipment and managing vendors. Key outputs: RFQ, TBE, purchase orders, expediting, FAT (Factory Acceptance Test — going to the vendor's factory to witness testing before shipping). A talent who "did TBEs" was comparing competing vendors on technical merit — that requires real discipline depth.
+
+**Construction / Fabrication / Hook-up (P5)**
+Building and installing the asset. Site or yard work. Punch lists track outstanding items — A-punch must be resolved before startup, B-punch after. Redlines are mark-ups showing what was actually built vs. the design. Clearing A-punch = directly accountable for getting systems construction-complete.
+
+**Pre-Commissioning / Commissioning / Startup (P6)**
+The most intense phase. Systems handed over from construction, tested, and proven before first hydrocarbons or first power. Key milestones: MC (Mechanical Completion), loop checks, PSSR (Pre-Startup Safety Review — mandatory safety gate before energising), RFSU (Ready for Startup declaration), First Oil / First Gas / First Power. A commissioning engineer who signed the PSSR or RFSU was personally accountable for the safety and readiness of the plant. That is the highest individual responsibility in commissioning.
+
+**Operations and Maintenance — O&M (P7)**
+Running and maintaining the asset long-term. Shift operations, PTW (Permit to Work system), planned maintenance, turnarounds (TAR — full planned shutdown every 3–5 years for major maintenance and inspection), MOC (Management of Change for any plant modification). Someone on O&M for 5+ years on the same asset knows it deeply. They have seen failures, done the fixes, and understand real equipment behaviour in ways no design engineer does.
+
+**Decommissioning (P8)**
+End-of-life shutdown and removal. Growing sector, especially North Sea and ageing Southeast Asian offshore assets.
+
+## 2. Key Documents and What They Signal
+
+**MDR — Master Document Register**
+The controlled index of every document on the project — drawings, datasheets, calculations, vendor data, certificates. Document controllers own and maintain it. Every engineer submits documents through it. "I maintained the MDR" = document control role (TL2–TL4). "I used the MDR to track vendor data" = standard for any engineer, not a sign of ownership. On large EPC projects the MDR can have tens of thousands of documents. Do not confuse with Manufacturer's Data Report — a different MDR used in QA/QC for equipment documentation from vendors.
+
+**CTR — Cost Time Resources**
+A project controls tool that breaks scope into work packages with hours, durations, and costs. "I prepared CTRs" = project controls or cost engineering role. "I reviewed CTRs" = package manager or project manager level. CTRs are how EPC contractors plan and control their own execution — someone who built them understands the guts of project controls.
+
+**P&ID — Piping and Instrumentation Diagram**
+The core document of any process plant — shows every pipe, valve, instrument, and control loop. Everyone reads them. Process and piping engineers own them. "I authored the P&IDs" = process or piping lead. "I reviewed the P&IDs for instrument content" = instrumentation role.
+
+**HAZOP — Hazard and Operability Study**
+Systematic review of P&IDs to identify hazards. Facilitated by a process safety engineer. Attended by process, piping, instrumentation, and operations. "I chaired the HAZOP" = TL5+, recognised process safety authority. "I attended the HAZOP for my system" = standard discipline participation.
+
+**PSSR — Pre-Startup Safety Review**
+Mandatory safety gate before introducing hydrocarbons or energising live systems. The person signing the PSSR is personally accountable for confirming the plant is safe to start. Senior commissioning or startup role. If someone signed a PSSR, they were trusted with real accountability.
+
+**RFSU — Ready for Startup**
+Formal declaration that a system is commissioned and ready for operations. Issued by commissioning, countersigned by operations. Signing RFSU = commissioning authority or startup manager.
+
+**ITR — Inspection and Test Record**
+Commissioning completion record — proves a system has been tested to specification. "I signed off ITRs" = commissioning authority.
+
+**TBE — Technical Bid Evaluation**
+Procurement document comparing vendor bids on technical criteria. "I did TBEs" = procurement or discipline engineering role. Requires technical depth to judge vendor proposals.
+
+**MTO — Material Take-Off**
+Quantified list of materials derived from engineering documents. Piping engineers and project controls produce it.
+
+**IFC / AFC — Document Status**
+IFC = Issued for Construction, AFC = Approved for Construction. Working with IFC/AFC drawings means the design is locked and construction-ready.
+
+## 3. Contract and Delivery Models
+
+**EPC — Engineering, Procurement, Construction**
+Contractor delivers all three. Most common delivery model in oil and gas and energy. Can be LSTK (fixed price — contractor bears overrun risk) or reimbursable (client pays actual cost plus fee).
+
+**EPCIC — Engineering, Procurement, Construction, Installation, Commissioning**
+EPC plus marine installation and commissioning. Used for offshore and subsea projects. Higher complexity and financial risk for the contractor.
+
+**LSTK — Lump Sum Turn Key**
+Fixed price. When an LSTK project bleeds money, the pressure on the team is severe. A talent who survived a troubled LSTK has real battle experience.
+
+**PMT — Project Management Team**
+The owner or client-side team overseeing the EPC contractor. "I was embedded in the PMT" = owner-side role, high visibility, close to major decisions. More senior exposure than being on the contractor side at the same phase.
+
+**Reimbursable / Cost-Plus**
+Client pays actual cost plus fee. Common in FEED and early-phase work. Less financial pressure on the contractor team.
+
+## 4. Asset Types
+
+**FPSO — Floating Production Storage Offloading**
+A vessel that produces, processes, and stores oil offshore. A full process plant on a ship — one of the most complex assets in the industry. Long-term FPSO O&M means deep process and mechanical knowledge.
+
+**LNG Plant**
+Converts natural gas to liquid (liquefaction) or back (regasification). Some of the largest and most expensive projects ever built. LNG experience = large-scale, high-complexity work.
+
+**Offshore Fixed Platform — Jacket and Topsides**
+Steel jacket on the seabed, process topsides above. Classic North Sea and Southeast Asian offshore structure.
+
+**Subsea Tieback**
+Underwater production system — wellheads, manifolds, flowlines, umbilicals — connected to a host facility. Extreme pressures, ROV-access only. Subsea engineers are a specialist group.
+
+**Refinery and Petrochemical**
+Onshore processing of crude or chemicals. High process safety demand. TAR cycles every 3–5 years — working a TAR means compressed timelines and a massive temporary workforce.
+
+**Offshore Wind Farm**
+WTG (Wind Turbine Generator), foundations, array cables, export cables, offshore substation. Growing fast. Many O&G engineers transitioning here — the technical adjacency is real but standards and supply chain are different.
+
+**Solar / BESS**
+Utility-scale solar and Battery Energy Storage Systems. BESS is a specialist area — commissioning is complex and fire safety (thermal runaway) is a critical design constraint.
+
+## 5. Disciplines — What They Do Day-to-Day
+
+**Process / Chemical Engineering**
+Owns the process design — P&IDs, heat and mass balance, equipment sizing, HAZOP actions. If something does not perform as designed, the process engineer gets the call first. Central to FEED and detailed engineering.
+
+**Piping**
+Turns P&IDs into physical routing — pipe stress analysis, isometrics, support design, 3D modelling (AVEVA E3D, PDMS, SP3D), MTO. The most labour-intensive discipline on large EPC projects.
+
+**Instrumentation and Control — I&C / E&I**
+I/O lists, loop diagrams, control narratives, cause and effect matrices, DCS and SIS configuration. If it measures or controls something, it is I&C. Critical in commissioning — most loop checks are I&C work.
+
+**Electrical**
+Single-line diagrams, load lists, cable schedules, protection studies. HV vs LV matters — HV work requires specific authorisation. More senior roles involve power systems studies and grid connection.
+
+**Structural and Civil**
+Steel design, foundations, weight control. On offshore projects every extra tonne costs in fabrication, installation, and structural integrity.
+
+**Project Controls**
+Planning (Primavera P6), cost control, CTRs, progress reporting, earned value. The nervous system of an EPC project — tells the project manager the truth about schedule and cost, even when no one wants to hear it.
+
+**Document Control**
+MDR ownership, transmittals, EDMS management. On large projects with tens of thousands of documents across dozens of contractors, getting document control wrong causes regulatory and handover failures.
+
+**Commissioning**
+Systems completion, loop checks, functional tests, startup procedures. Commissioning engineers are often highly mobile specialists who move project to project. Signing PSSR or RFSU is the highest individual accountability in the commissioning phase.
+
+**HSE and Process Safety**
+HSE advisors handle site safety — JSAs, PTW audits, toolbox talks, incident investigation. Process safety engineers are engineering-level — HAZOP, LOPA, bowtie, QRA, safety case. They are not the same role. Do not conflate them.
+
+## 6. Seniority Signals — How to Read What They Say
+
+**Junior — TL1 to TL2:** "I was assisting", "I supported the team", "my lead reviewed it", "I helped prepare".
+
+**Mid-level — TL3 to TL4:** "I produced", "I was responsible for the package", "I prepared the datasheets", "I coordinated with the vendor".
+
+**Senior / Lead — TL5:** "I led the discipline", "I reviewed and approved", "I managed a team of X engineers", "I reported to the project manager".
+
+**Principal / Head — TL6:** "I was the technical authority", "I set the engineering standards for the contract", "I reported to the PMT", "I ran the department".
+
+**The most important distinction — Owned vs Contributed vs Was Near:**
+- "I produced and issued the HAZOP report" — owned it, strong evidence
+- "I attended the HAZOP for my system" — contributed, normal participation
+- "The HAZOP was running while I was on the project" — was near it, weak evidence
+
+Surface this naturally: "Were you running the HAZOP yourself, or feeding input into it?"
+
+## 7. Key Credentials to Recognise
+
+**BOSIET / FOET / T-BOSIET** — Basic Offshore Safety training. Mandatory for offshore work. If they have it, they have worked offshore. T-BOSIET is the tropical variant common in Southeast Asia.
+
+**CompEx** — Competency for working with electrical or mechanical equipment in explosive atmospheres. Required on oil and gas sites. Having it confirms real hazardous area site experience.
+
+**HV AP — High Voltage Authorised Person** — Authorisation to work on HV systems. Employer-specific but site-mandatory. Signals real hands-on HV electrical experience.
+
+**GWO BST / BTT** — Global Wind Organisation safety training. Mandatory for offshore wind work. Having it signals wind sector exposure.
+
+**NEBOSH IGC / Diploma** — Health and safety qualifications. IGC is mid-level; Diploma is senior HSE. Common across oil and gas, construction, and renewables.
+
+**DOSH SHO** — Malaysia Safety and Health Officer licence. Required to work as an SHO in Malaysia.
+
+**PMP** — Project Management Professional (PMI). Signals formal PM training. Common at senior project delivery level.
+
+**HAZOP Leader** — Formal recognition to facilitate HAZOPs. Signals deep process safety experience — not just attending but running them.
+
+**API 510 / 570 / 580 / 653** — Pressure vessel, piping, RBI, and tank inspection certifications. Signals asset integrity specialisation.
+
+**IWCF / IADC WellCAP** — Well control certifications. If someone has these, they have worked in drilling or well operations.
+`.trim();
+
 const DEFAULT_SECONDARY = `
 # FIVE DESTINATIONS ACROSS THE CONVERSATION
 
@@ -311,6 +489,10 @@ export function buildDefaultSecondaryTemplate(): string {
   return DEFAULT_SECONDARY;
 }
 
+export function buildDefaultKnowledgeTemplate(): string {
+  return DEFAULT_KNOWLEDGE;
+}
+
 export function buildDefaultMasterTemplate(): string {
   return [
     buildIdentity('{{DATE_TIME}}'),
@@ -349,7 +531,8 @@ export function buildSystemPrompt(
     ].join('\n\n');
   }
 
-  const parts = [staticPart];
+  const knowledgeText = overrides.knowledge?.trim() || DEFAULT_KNOWLEDGE;
+  const parts = [staticPart, knowledgeText];
   if (overrides.secondary?.trim()) parts.push(overrides.secondary.trim());
   parts.push(buildProfileSection(candidateName, profileData));
 

@@ -1,6 +1,6 @@
 import { Express, Request, Response } from 'express';
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import { createLLM, getMYTDateTime, buildDefaultMasterTemplate } from './llm';
+import { createLLM, getMYTDateTime, buildDefaultMasterTemplate, buildDefaultKnowledgeTemplate } from './llm';
 import { loadPromptOverrides, savePromptOverrides } from './promptConfig';
 import { getHandler, getActiveCalls } from './activeCallRegistry';
 import { supabase } from './db/supabase';
@@ -430,6 +430,7 @@ export function registerDashboardRoutes(app: Express): void {
     res.json({
       masterPrompt: hasOverride ? overrides.masterOverride : buildDefaultMasterTemplate(),
       secondary: overrides.secondary,
+      knowledge: overrides.knowledge || buildDefaultKnowledgeTemplate(),
       hasOverride,
     });
   });
@@ -437,8 +438,8 @@ export function registerDashboardRoutes(app: Express): void {
   // Prompt editor — save changes
   app.post('/api/dashboard/prompt', async (req: Request, res: Response) => {
     try {
-      const { masterOverride, secondary } = req.body as { masterOverride: string | null; secondary: string };
-      await savePromptOverrides({ masterOverride: masterOverride ?? null, secondary: secondary ?? '' });
+      const { masterOverride, secondary, knowledge } = req.body as { masterOverride: string | null; secondary: string; knowledge: string };
+      await savePromptOverrides({ masterOverride: masterOverride ?? null, secondary: secondary ?? '', knowledge: knowledge ?? '' });
       res.json({ ok: true });
     } catch (err) {
       res.status(500).json({ ok: false, error: String(err) });
@@ -690,14 +691,13 @@ export function registerDashboardRoutes(app: Express): void {
     }
   });
 
-  // Prompt version history — list last 10
+  // Prompt version history — list all
   app.get('/api/dashboard/prompt-versions', async (_req: Request, res: Response) => {
     try {
       const { data, error } = await supabase
         .from('_prompt_versions')
         .select('id, master, secondary, created_at')
-        .order('created_at', { ascending: false })
-        .limit(10);
+        .order('created_at', { ascending: false });
       if (error) throw error;
       res.json({ data: data ?? [] });
     } catch (err) {

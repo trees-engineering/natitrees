@@ -443,7 +443,40 @@ const SCENARIOS: Scenario[] = [
     ],
   },
 
-  // ─── 13. The Social Drifter (Kevin) ───────────────────────────────
+  // ─── 13. Blank Profile — Full Coverage Test (Nina) ───────────────
+  // Nina is a commissioning engineer with 9 years across oil & gas and
+  // renewables. Nothing is on file — every MATCHING_FIELD is a gap.
+  // Tests whether the agent can naturally surface job title, years of
+  // experience, asset types, systems, project phases, discipline, seniority,
+  // deliverables with authorship level, recency, certifications with expiry,
+  // standards, availability, rate, work rights, and mobility — all without
+  // it feeling like a checklist. She's open and friendly but doesn't
+  // volunteer structured information unprompted.
+  {
+    title: 'Blank Profile — Full Coverage Test',
+    candidateType: 'Open and friendly, no profile on file — tests full field coverage from scratch',
+    candidateName: 'Nina',
+    profileContext: {},
+    messages: [
+      "Yeah now's perfect, go ahead.",
+      "All good, just finished a site visit so good timing actually.",
+      "I'm a commissioning engineer. Been doing it about nine years now.",
+      "Started in oil and gas — refineries mainly — then moved into renewables about three years ago. Mostly solar utility scale now.",
+      "Currently on a 150MW solar farm up in Queensland. We're in the commissioning phase, been on it seven months.",
+      "I'm the lead on the HV side — substations, transformers, protection systems. We've got a small team, three under me.",
+      "Yeah I do the test records, the commissioning procedures, the handover packs. I sign off on the HV work directly.",
+      "Before this I was on an LNG plant in Darwin — that was detailed engineering through to commissioning startup. About two years on that one.",
+      "Different world compared to solar. Much more complex systems — DCS, rotating equipment, high pressure. But I actually loved the technical challenge.",
+      "I hold my electrical licence, working at heights, and I've just renewed my EWP. The HV switching licence is current, renewed last year.",
+      "We work to AS standards here — AS 61439, AS 3000. On the LNG side it was more IEC and some API for the rotating equipment.",
+      "I'm open to what's next. This project wraps in about three months and I haven't signed anything after it.",
+      "Contract mostly. I've been contracting for five years now — I like the flexibility. Day rate at the moment is 750.",
+      "I'm Australian so no issues with work rights. Happy to travel — I've been FIFO most of my career. Open to rotations.",
+      "Yeah I think that covers it — what happens from here?",
+    ],
+  },
+
+  // ─── 14. The Social Drifter (Kevin) ───────────────────────────────
   // Kevin is a Production Supervisor with 11 years offshore O&G experience.
   // He's friendly and genuinely willing to talk — but keeps drifting into
   // rig life stories, industry gossip, and crew banter. None of his tangents

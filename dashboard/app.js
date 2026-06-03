@@ -1216,16 +1216,18 @@ async function loadPrompt() {
   promptLoaded = true;
   renderPromptHistory();
 
-  const masterTA = document.getElementById('master-textarea');
+  const masterTA    = document.getElementById('master-textarea');
   const secondaryTA = document.getElementById('secondary-textarea');
+  const knowledgeTA = document.getElementById('knowledge-textarea');
   const badge = document.getElementById('master-badge');
 
   masterTA.value = 'Loading…';
   try {
     const res = await fetch('/api/dashboard/prompt');
     const data = await res.json();
-    masterTA.value = data.masterPrompt;
+    masterTA.value    = data.masterPrompt;
     secondaryTA.value = data.secondary ?? '';
+    knowledgeTA.value = data.knowledge ?? '';
     promptHasOverride = data.hasOverride;
     badge.classList.toggle('visible', data.hasOverride);
   } catch {
@@ -1245,15 +1247,16 @@ async function postPrompt(body) {
 }
 
 async function saveMasterPrompt() {
-  const masterTA = document.getElementById('master-textarea');
+  const masterTA    = document.getElementById('master-textarea');
   const secondaryTA = document.getElementById('secondary-textarea');
+  const knowledgeTA = document.getElementById('knowledge-textarea');
   const badge = document.getElementById('master-badge');
   const btn = document.getElementById('master-save-btn');
 
   btn.disabled = true;
   btn.textContent = 'Saving…';
   try {
-    await postPrompt({ masterOverride: masterTA.value, secondary: secondaryTA.value });
+    await postPrompt({ masterOverride: masterTA.value, secondary: secondaryTA.value, knowledge: knowledgeTA.value });
     promptHasOverride = true;
     badge.classList.add('visible');
     showToast('Master prompt saved');
@@ -1267,14 +1270,15 @@ async function saveMasterPrompt() {
 }
 
 async function resetMasterPrompt() {
-  const masterTA = document.getElementById('master-textarea');
+  const masterTA    = document.getElementById('master-textarea');
   const secondaryTA = document.getElementById('secondary-textarea');
+  const knowledgeTA = document.getElementById('knowledge-textarea');
   const badge = document.getElementById('master-badge');
   const btn = document.getElementById('master-reset-btn');
 
   btn.disabled = true;
   try {
-    await postPrompt({ masterOverride: null, secondary: secondaryTA.value });
+    await postPrompt({ masterOverride: null, secondary: secondaryTA.value, knowledge: knowledgeTA.value });
     const res = await fetch('/api/dashboard/prompt');
     const data = await res.json();
     masterTA.value = data.masterPrompt;
@@ -1289,8 +1293,9 @@ async function resetMasterPrompt() {
 }
 
 async function saveSecondaryPrompt() {
-  const masterTA = document.getElementById('master-textarea');
+  const masterTA    = document.getElementById('master-textarea');
   const secondaryTA = document.getElementById('secondary-textarea');
+  const knowledgeTA = document.getElementById('knowledge-textarea');
   const btn = document.getElementById('secondary-save-btn');
 
   btn.disabled = true;
@@ -1299,6 +1304,7 @@ async function saveSecondaryPrompt() {
     await postPrompt({
       masterOverride: promptHasOverride ? masterTA.value : null,
       secondary: secondaryTA.value,
+      knowledge: knowledgeTA.value,
     });
     showToast('Secondary prompt saved');
     await savePromptSnapshot(masterTA.value, secondaryTA.value);
@@ -1307,6 +1313,53 @@ async function saveSecondaryPrompt() {
   } finally {
     btn.disabled = false;
     btn.textContent = 'Save changes';
+  }
+}
+
+async function saveKnowledgePrompt() {
+  const masterTA    = document.getElementById('master-textarea');
+  const secondaryTA = document.getElementById('secondary-textarea');
+  const knowledgeTA = document.getElementById('knowledge-textarea');
+  const btn = document.getElementById('knowledge-save-btn');
+
+  btn.disabled = true;
+  btn.textContent = 'Saving…';
+  try {
+    await postPrompt({
+      masterOverride: promptHasOverride ? masterTA.value : null,
+      secondary: secondaryTA.value,
+      knowledge: knowledgeTA.value,
+    });
+    showToast('Knowledge base saved');
+  } catch (err) {
+    showToast('Save failed: ' + String(err), true);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Save changes';
+  }
+}
+
+async function resetKnowledgePrompt() {
+  const masterTA    = document.getElementById('master-textarea');
+  const secondaryTA = document.getElementById('secondary-textarea');
+  const knowledgeTA = document.getElementById('knowledge-textarea');
+  const btn = document.getElementById('knowledge-reset-btn');
+
+  btn.disabled = true;
+  try {
+    await postPrompt({
+      masterOverride: promptHasOverride ? masterTA.value : null,
+      secondary: secondaryTA.value,
+      knowledge: '',
+    });
+    const res = await fetch('/api/dashboard/prompt');
+    const data = await res.json();
+    knowledgeTA.value = data.knowledge ?? '';
+    showToast('Knowledge base reset to default');
+  } catch (err) {
+    showToast('Reset failed: ' + String(err), true);
+  } finally {
+    btn.disabled = false;
   }
 }
 
@@ -1326,6 +1379,8 @@ function initPromptEditor() {
   document.getElementById('secondary-clear-btn').addEventListener('click', () => {
     document.getElementById('secondary-textarea').value = '';
   });
+  document.getElementById('knowledge-save-btn').addEventListener('click', saveKnowledgePrompt);
+  document.getElementById('knowledge-reset-btn').addEventListener('click', resetKnowledgePrompt);
 }
 
 // ═══════════════════════════════════════
@@ -1356,7 +1411,49 @@ async function renderPromptHistory() {
       card.innerHTML = `<div class="card-desc text-muted">No saves yet — save the prompt to start tracking versions.</div>`;
       return;
     }
-    card.innerHTML = promptVersionCache.map((entry, i) => {
+    const VISIBLE = 5;
+    const total = promptVersionCache.length;
+    const hasMore = total > VISIBLE;
+
+    function buildRows(limit) {
+      return promptVersionCache.slice(0, limit).map((entry, i) => {
+        const d = new Date(entry.created_at);
+        const dateStr = d.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+        const timeStr = d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+        const preview = entry.master.replace(/\n/g, ' ').slice(0, 90);
+        return `
+          <div class="ph-row">
+            <div class="ph-row-left">
+              <div class="ph-when">${dateStr} · ${timeStr}${i === 0 ? ' <span class="ph-latest">latest</span>' : ''}</div>
+              <div class="ph-preview">${esc(preview)}${entry.master.length > 90 ? '…' : ''}</div>
+            </div>
+            <button class="ph-restore-btn" onclick="restorePromptVersion(${i})">Restore</button>
+          </div>`;
+      }).join('');
+    }
+
+    function render(showAll) {
+      const rows = buildRows(showAll ? total : VISIBLE);
+      const toggleBtn = hasMore
+        ? `<button class="ph-toggle-btn" onclick="togglePromptHistory(${showAll})">${showAll ? 'Show less' : `Show all ${total} versions`}</button>`
+        : '';
+      card.innerHTML = rows + toggleBtn;
+    }
+
+    render(false);
+  } catch {
+    card.innerHTML = `<div class="card-desc text-muted">Could not load version history.</div>`;
+  }
+}
+
+function togglePromptHistory(currentlyShowingAll) {
+  const card = document.getElementById('prompt-history-card');
+  if (!card) return;
+  const VISIBLE = 5;
+  const total = promptVersionCache.length;
+
+  function buildRows(limit) {
+    return promptVersionCache.slice(0, limit).map((entry, i) => {
       const d = new Date(entry.created_at);
       const dateStr = d.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
       const timeStr = d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
@@ -1370,9 +1467,12 @@ async function renderPromptHistory() {
           <button class="ph-restore-btn" onclick="restorePromptVersion(${i})">Restore</button>
         </div>`;
     }).join('');
-  } catch {
-    card.innerHTML = `<div class="card-desc text-muted">Could not load version history.</div>`;
   }
+
+  const showAll = !currentlyShowingAll;
+  const rows = buildRows(showAll ? total : VISIBLE);
+  const toggleBtn = `<button class="ph-toggle-btn" onclick="togglePromptHistory(${showAll})">${showAll ? 'Show less' : `Show all ${total} versions`}</button>`;
+  card.innerHTML = rows + toggleBtn;
 }
 
 function restorePromptVersion(i) {
