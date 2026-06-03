@@ -1612,6 +1612,110 @@ body:has(.active-call-banner.visible) .app-main { padding-top: calc(var(--header
   .prompt-toast { bottom: 24px; }
 }
 
+/* ═══════════════════════════════════════════════════════════
+   VISUAL ENHANCEMENTS
+   ═══════════════════════════════════════════════════════════ */
+
+/* ─── Section label accent line ──────────────────────────── */
+.section-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.section-label::before {
+  content: '';
+  display: inline-block;
+  width: 14px;
+  height: 2px;
+  background: var(--gold);
+  border-radius: 1px;
+  flex-shrink: 0;
+}
+
+/* ─── Hero banner animated glow orb ─────────────────────── */
+@keyframes hero-glow {
+  0%, 100% { opacity: 0.18; transform: scale(1) translate(0, 0); }
+  50%       { opacity: 0.30; transform: scale(1.2) translate(-8%, 8%); }
+}
+.hero-banner::before { animation: hero-glow 5s ease-in-out infinite; }
+
+/* ─── Hero title — white to gold gradient text ───────────── */
+.hero-title {
+  background: linear-gradient(90deg, #ffffff 40%, var(--gold-bright) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ─── Pulsing online status dot ──────────────────────────── */
+@keyframes status-pulse {
+  0%, 100% { box-shadow: 0 0 6px var(--green), 0 0 0 0   rgba(13,122,88,0.5); }
+  60%       { box-shadow: 0 0 6px var(--green), 0 0 0 7px rgba(13,122,88,0);   }
+}
+.status-pill.online .status-dot { animation: status-pulse 2s ease-out infinite; }
+
+/* ─── Pulsing health-dot.ok ──────────────────────────────── */
+@keyframes health-pulse {
+  0%, 100% { box-shadow: 0 0 0 3px var(--green-dim); }
+  50%       { box-shadow: 0 0 0 6px rgba(13,122,88,0.04); }
+}
+.health-dot.ok { animation: health-pulse 2.5s ease-in-out infinite; }
+
+/* ─── Gradient animated bar chart ────────────────────────── */
+.kpi-bar {
+  background: linear-gradient(180deg, var(--gold-light) 0%, var(--navy-light) 100%);
+  transition: height 0.65s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.kpi-bar-wrap {
+  position: relative;
+  cursor: default;
+}
+.kpi-bar-wrap[data-tip]::after {
+  content: attr(data-tip);
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--navy);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 5px 9px;
+  border-radius: 7px;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s;
+  z-index: 20;
+  box-shadow: 0 4px 12px rgba(11,35,69,0.2);
+}
+.kpi-bar-wrap:hover[data-tip]::after { opacity: 1; }
+
+/* ─── KPI card coloured top accents ──────────────────────── */
+.kpi-card:nth-child(1) { border-top: 3px solid var(--gold); }
+.kpi-card:nth-child(2) { border-top: 3px solid var(--navy-light); }
+.kpi-card:nth-child(3) { border-top: 3px solid var(--navy-mid); }
+.kpi-card:nth-child(4) { border-top: 3px solid var(--green); }
+
+/* ─── Psychology card coloured left border ───────────────── */
+.psych-card { border-left: 3px solid var(--gold-dim); }
+.psych-card:hover { border-left-color: var(--gold); }
+
+/* ─── Transcript AI summary snippet ──────────────────────── */
+.tx-snippet {
+  font-size: 11px;
+  color: var(--text-2);
+  line-height: 1.45;
+  margin-top: 5px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  opacity: 0.75;
+  font-style: italic;
+}
+.tx-expanded .tx-snippet { display: none; }
+
 /* ─── Utilities ──────────────────────────────────────────────── */
 .divider     { height: 1px; background: var(--border-sub); margin: 16px 0; }
 .spacer-sm   { height: 8px; }
@@ -1625,3 +1729,113 @@ body:has(.active-call-banner.visible) .app-main { padding-top: calc(var(--header
 /* legacy aliases from app.js */
 .text-purple { color: var(--gold); }
 .text-amber  { color: var(--gold); }
+
+/* ─── Live Call Status Card ──────────────────────────────────── */
+.live-call-idle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 0;
+}
+.live-call-idle-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--text-4);
+  flex-shrink: 0;
+}
+.live-call-idle-text { font-size: 13px; color: var(--text-3); }
+
+.live-call-active {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 4px 0;
+}
+.live-call-pulse {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  background: var(--green);
+  box-shadow: 0 0 0 0 rgba(13, 122, 88, 0.4);
+  animation: live-pulse 1.5s ease-out infinite;
+  flex-shrink: 0;
+}
+@keyframes live-pulse {
+  0%   { box-shadow: 0 0 0 0   rgba(13, 122, 88, 0.45); }
+  70%  { box-shadow: 0 0 0 9px rgba(13, 122, 88, 0);    }
+  100% { box-shadow: 0 0 0 0   rgba(13, 122, 88, 0);    }
+}
+.live-call-info { flex: 1; min-width: 0; }
+.live-call-name {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--navy);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.live-call-meta { font-size: 12px; color: var(--text-3); margin-top: 2px; }
+.live-call-goto-btn {
+  background: var(--navy-pale);
+  color: var(--navy-light);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.live-call-goto-btn:hover { background: var(--navy-dim); }
+
+/* ─── Prompt Version History ─────────────────────────────────── */
+.ph-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border-sub);
+}
+.ph-row:last-child { border-bottom: none; }
+.ph-row-left { display: flex; flex-direction: column; gap: 3px; min-width: 0; flex: 1; }
+.ph-when {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-2);
+  font-family: var(--mono);
+}
+.ph-latest {
+  display: inline-block;
+  font-size: 9px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 1px 6px;
+  border-radius: 100px;
+  background: var(--green-dim);
+  color: var(--green);
+  margin-left: 6px;
+  vertical-align: middle;
+}
+.ph-preview {
+  font-size: 12px;
+  color: var(--text-3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ph-restore-btn {
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--navy-light);
+  border-radius: 7px;
+  padding: 5px 13px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: background 0.15s;
+}
+.ph-restore-btn:hover { background: var(--navy-pale); }
