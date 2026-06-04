@@ -1,7 +1,10 @@
+import type { CallBrief } from './llm';
+
 interface CallMeta {
   talentId: string;
   candidateName: string;
   isReturning?: boolean;
+  callBrief?: CallBrief;
 }
 
 const store = new Map<string, CallMeta>();

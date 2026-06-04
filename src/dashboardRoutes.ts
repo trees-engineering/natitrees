@@ -637,6 +637,55 @@ export function registerDashboardRoutes(app: Express): void {
     }
   });
 
+  // Call Brief — get saved brief for a candidate
+  app.get('/api/dashboard/call-brief/:talentId', async (req: Request, res: Response) => {
+    try {
+      const { data } = await supabase
+        .from('_call_briefs')
+        .select('fields, custom_questions')
+        .eq('talent_id', req.params.talentId)
+        .maybeSingle();
+      const brief = data
+        ? { fields: data.fields ?? [], customQuestions: data.custom_questions ?? '' }
+        : { fields: [], customQuestions: '' };
+      res.json({ brief });
+    } catch (err) {
+      res.json({ brief: { fields: [], customQuestions: '' } });
+    }
+  });
+
+  // Call Brief — save brief for a candidate
+  app.post('/api/dashboard/call-brief/:talentId', async (req: Request, res: Response) => {
+    try {
+      const { fields, customQuestions } = req.body as { fields: string[]; customQuestions: string };
+      const { error } = await supabase
+        .from('_call_briefs')
+        .upsert({
+          talent_id: req.params.talentId,
+          fields: fields ?? [],
+          custom_questions: customQuestions ?? '',
+          updated_at: new Date().toISOString(),
+        }, { onConflict: 'talent_id' });
+      if (error) throw new Error(error.message);
+      res.json({ ok: true });
+    } catch (err) {
+      res.status(500).json({ ok: false, error: err instanceof Error ? err.message : String(err) });
+    }
+  });
+
+  // Call Brief — get candidate profile gaps (which MATCHING_FIELDS are blank)
+  app.get('/api/dashboard/candidate-gaps/:talentId', async (req: Request, res: Response) => {
+    try {
+      const { loadProfile } = await import('./interview/profileLoader');
+      const { buildProfileContext } = await import('./interview/sessionStore');
+      const profile = await loadProfile(req.params.talentId);
+      const ctx = buildProfileContext(profile);
+      res.json({ filled: Object.keys(ctx), profile: ctx });
+    } catch (err) {
+      res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
+    }
+  });
+
   // Trigger outbound call from dashboard (candidate from DB)
   app.post('/api/dashboard/call', async (req: Request, res: Response) => {
     const { talentId } = req.body as { talentId: string };

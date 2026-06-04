@@ -46,6 +46,7 @@ function initTabs() {
     if (tabId === 'overview') loadConfig();
     if (tabId === 'prompt') loadPrompt();
     if (tabId === 'calls') loadCandidates();
+    if (tabId === 'callbrief') initCallBrief();
   }
 
   btns.forEach(btn => {
@@ -1551,6 +1552,213 @@ function init() {
   loadConfig();
   setInterval(checkStatus, 30_000);
   setInterval(loadConfig, 60_000);
+}
+
+// ═══════════════════════════════════════
+//  CALL BRIEF
+// ═══════════════════════════════════════
+
+const BRIEF_FIELD_GROUPS = [
+  {
+    label: 'Role & Experience',
+    fields: ['Job function', 'Discipline', 'Current role and title', 'Years of experience', 'Role type', 'Seniority and authority'],
+  },
+  {
+    label: 'Technical Background',
+    fields: ['Asset sectors', 'Systems and equipment', 'Project phases', 'Deliverables owned', 'Deliverable authorship level', 'Experience recency'],
+  },
+  {
+    label: 'Tools & Standards',
+    fields: ['Tools and software', 'Standards and codes', 'Vendor and platform experience'],
+  },
+  {
+    label: 'Location & Scale',
+    fields: ['Regions worked', 'Work environment', 'Project scale'],
+  },
+  {
+    label: 'Credentials',
+    fields: ['Certifications and licences'],
+  },
+  {
+    label: 'Availability & Commercial',
+    fields: ['Availability', 'Available from', 'Notice period', 'Rate', 'Contract preference', 'Mobility', 'Visa status', 'Work rights'],
+  },
+];
+
+let briefLoaded = false;
+let briefAllCandidates = [];
+let briefSelectedFields = [];
+let briefCurrentTalentId = null;
+let briefFilledFields = [];
+
+function initCallBrief() {
+  if (briefLoaded) return;
+  briefLoaded = true;
+
+  const sel = document.getElementById('brief-candidate-select');
+  const searchEl = document.getElementById('brief-search');
+
+  // Load candidates
+  fetch('/api/dashboard/candidates')
+    .then(r => r.json())
+    .then(({ data }) => {
+      briefAllCandidates = data ?? [];
+      populateBriefSelect(briefAllCandidates);
+    })
+    .catch(() => {
+      sel.innerHTML = `<option value="">— could not load candidates —</option>`;
+    });
+
+  searchEl.addEventListener('input', e => {
+    const q = e.target.value.trim().toLowerCase();
+    const filtered = q
+      ? briefAllCandidates.filter(c => (c.name ?? '').toLowerCase().includes(q))
+      : briefAllCandidates;
+    populateBriefSelect(filtered);
+  });
+
+  sel.addEventListener('change', () => {
+    const c = briefAllCandidates.find(x => String(x.id) === sel.value);
+    if (c) {
+      document.getElementById('brief-candidate-detail').innerHTML = `
+        <div class="candidate-detail-row">
+          <div class="candidate-name">${esc(c.name ?? 'Unknown')}</div>
+          <div class="candidate-meta">${c.phone ? esc(c.phone) : '<span class="text-muted">No phone</span>'}</div>
+        </div>`;
+      loadBriefForCandidate(c.id);
+    } else {
+      document.getElementById('brief-candidate-detail').innerHTML = '';
+      document.getElementById('brief-config').style.display = 'none';
+      document.getElementById('brief-no-candidate').style.display = '';
+      briefCurrentTalentId = null;
+    }
+  });
+
+  document.getElementById('brief-save-btn').addEventListener('click', saveBrief);
+  document.getElementById('brief-clear-btn').addEventListener('click', clearBrief);
+}
+
+function populateBriefSelect(list) {
+  const sel = document.getElementById('brief-candidate-select');
+  const prev = sel.value;
+  sel.innerHTML = `<option value="">— choose a candidate —</option>` +
+    list.map(c => `<option value="${esc(c.id)}">${esc(c.name ?? 'Unknown')}${c.phone ? '' : ' (no phone)'}</option>`).join('');
+  if (list.find(c => String(c.id) === prev)) sel.value = prev;
+}
+
+async function loadBriefForCandidate(talentId) {
+  briefCurrentTalentId = talentId;
+  briefSelectedFields = [];
+
+  document.getElementById('brief-config').style.display = '';
+  document.getElementById('brief-no-candidate').style.display = 'none';
+  document.getElementById('brief-gaps-loading').style.display = '';
+  document.getElementById('brief-field-groups').style.display = 'none';
+  document.getElementById('brief-custom-questions').value = '';
+
+  // Load gaps and saved brief in parallel
+  const [gapsRes, briefRes] = await Promise.allSettled([
+    fetch(`/api/dashboard/candidate-gaps/${talentId}`).then(r => r.json()),
+    fetch(`/api/dashboard/call-brief/${talentId}`).then(r => r.json()),
+  ]);
+
+  briefFilledFields = gapsRes.status === 'fulfilled' ? (gapsRes.value.filled ?? []) : [];
+  const savedBrief = briefRes.status === 'fulfilled' ? briefRes.value.brief : { fields: [], customQuestions: '' };
+
+  briefSelectedFields = savedBrief.fields ?? [];
+  document.getElementById('brief-custom-questions').value = savedBrief.customQuestions ?? '';
+
+  renderBriefFieldGroups();
+
+  document.getElementById('brief-gaps-loading').style.display = 'none';
+  document.getElementById('brief-field-groups').style.display = '';
+  updateBriefSelectedSummary();
+}
+
+function renderBriefFieldGroups() {
+  const container = document.getElementById('brief-field-groups');
+  container.innerHTML = BRIEF_FIELD_GROUPS.map(group => {
+    const tags = group.fields.map(field => {
+      const isMissing = !briefFilledFields.includes(field);
+      const isSelected = briefSelectedFields.includes(field);
+      return `<button class="brief-field-tag ${isMissing ? 'brief-tag-missing' : 'brief-tag-filled'} ${isSelected ? 'brief-tag-selected' : ''}"
+        data-field="${esc(field)}"
+        onclick="toggleBriefField(this, '${esc(field)}')"
+      >${esc(field)}${isMissing ? ' <span class="brief-missing-dot">●</span>' : ''}</button>`;
+    }).join('');
+    return `<div class="brief-group">
+      <div class="brief-group-label">${esc(group.label)}</div>
+      <div class="brief-tags">${tags}</div>
+    </div>`;
+  }).join('');
+}
+
+function toggleBriefField(btn, field) {
+  const idx = briefSelectedFields.indexOf(field);
+  if (idx === -1) {
+    briefSelectedFields.push(field);
+    btn.classList.add('brief-tag-selected');
+  } else {
+    briefSelectedFields.splice(idx, 1);
+    btn.classList.remove('brief-tag-selected');
+  }
+  updateBriefSelectedSummary();
+}
+
+function updateBriefSelectedSummary() {
+  const wrap = document.getElementById('brief-selected-wrap');
+  const tagsEl = document.getElementById('brief-selected-tags');
+  if (briefSelectedFields.length === 0) {
+    wrap.style.display = 'none';
+    return;
+  }
+  wrap.style.display = '';
+  tagsEl.innerHTML = briefSelectedFields.map(f =>
+    `<span class="brief-selected-chip">${esc(f)} <button onclick="removeBriefField('${esc(f)}')" class="brief-chip-remove">✕</button></span>`
+  ).join('');
+}
+
+function removeBriefField(field) {
+  briefSelectedFields = briefSelectedFields.filter(f => f !== field);
+  // also deselect the tag button
+  document.querySelectorAll('.brief-field-tag').forEach(btn => {
+    if (btn.dataset.field === field) btn.classList.remove('brief-tag-selected');
+  });
+  updateBriefSelectedSummary();
+}
+
+async function saveBrief() {
+  if (!briefCurrentTalentId) return;
+  const btn = document.getElementById('brief-save-btn');
+  btn.disabled = true;
+  btn.textContent = 'Saving…';
+  try {
+    const res = await fetch(`/api/dashboard/call-brief/${briefCurrentTalentId}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        fields: briefSelectedFields,
+        customQuestions: document.getElementById('brief-custom-questions').value.trim(),
+      }),
+    });
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error);
+    showToast('Brief saved');
+  } catch (err) {
+    showToast('Save failed: ' + String(err), true);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Save Brief';
+  }
+}
+
+async function clearBrief() {
+  if (!briefCurrentTalentId) return;
+  briefSelectedFields = [];
+  document.getElementById('brief-custom-questions').value = '';
+  document.querySelectorAll('.brief-field-tag').forEach(btn => btn.classList.remove('brief-tag-selected'));
+  updateBriefSelectedSummary();
+  await saveBrief();
 }
 
 document.addEventListener('DOMContentLoaded', init);

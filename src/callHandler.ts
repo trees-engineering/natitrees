@@ -147,8 +147,9 @@ export class CallHandler {
 
       await this.sessionReady;
       const profileData = this.session?.getProfileContext() ?? {};
-      console.log(`[llm] Building prompt for ${candidateName}`);
-      this.llm = createLLM(candidateName, profileData, getMYTDateTime());
+      const callBrief = getCallMeta(this.callSid)?.callBrief;
+      console.log(`[llm] Building prompt for ${candidateName}${callBrief ? ' (with brief)' : ''}`);
+      this.llm = createLLM(candidateName, profileData, getMYTDateTime(), callBrief);
       this.llm.addMessage('assistant', greeting);
     } finally {
       this.agentSpeaking = false;

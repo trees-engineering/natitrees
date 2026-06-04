@@ -1,6 +1,11 @@
 import { GeminiLLM } from './providers/llm/gemini';
 import { loadPromptOverrides } from './promptConfig';
 
+export interface CallBrief {
+  fields: string[];
+  customQuestions: string;
+}
+
 // ─── Interfaces ───────────────────────────────────────────────────────────────
 
 export interface ConversationMessage {
@@ -118,11 +123,15 @@ Never repeat their words back verbatim. Never fake a reaction.
 
 ## Conversation Moves
 
-Not every turn needs a question. Use these two moves to keep the conversation human:
+Not every turn needs a question. Use these moves to keep the conversation human:
 
 **React** — when something they said genuinely lands, show it. One short specific sentence on what caught your attention. Never manufacture a reaction that isn't there. If nothing landed, nudge instead.
 
 **Nudge** — when they've paused or have more to say: "say more", "go on", "what happened next?" No direction, just space to continue. Use this more than any other move — it gets better answers than a direct question and never feels like an interrogation.
+
+**Reflect** — when something real has been said, mirror the meaning back in different words without asking anything. Not what they said — what it meant. A genuine reflection makes someone feel heard and almost always produces more than the original answer. Only use this when it is honest — a manufactured reflection breaks trust faster than silence.
+
+**Question** — when the conversation has genuinely stalled and no other move will restart it. Anchored to something they actually said — open and specific, never generic.
 
 When in doubt between asking a question and nudging, nudge.
 `.trim();
@@ -511,6 +520,7 @@ export function buildSystemPrompt(
   candidateName: string,
   profileData: Record<string, string>,
   currentDateTime: string,
+  callBrief?: CallBrief,
 ): string {
   const overrides = loadPromptOverrides();
 
@@ -536,6 +546,29 @@ export function buildSystemPrompt(
   if (overrides.secondary?.trim()) parts.push(overrides.secondary.trim());
   parts.push(buildProfileSection(candidateName, profileData));
 
+  if (callBrief && (callBrief.fields.length > 0 || callBrief.customQuestions.trim())) {
+    const briefLines = [
+      '# CALL BRIEF — THIS OVERRIDES PHASE 2',
+      '',
+      'This call has a specific focus set by the admin. Follow these rules exactly:',
+      '',
+      '1. Only explore topics related to the fields listed below. Do not open any other threads.',
+      '2. If the talent brings up something unrelated, acknowledge it briefly and steer back to the focus areas.',
+      '3. Cover every field below before closing. Do not end the call with any of them uncovered.',
+      '4. Ask about them one at a time, conversationally — not as a list, not all at once.',
+      '5. Stay warm, direct, and natural. The focused scope is invisible to the talent.',
+    ];
+    if (callBrief.fields.length > 0) {
+      briefLines.push('', 'Focus fields — cover all of these, nothing else:');
+      callBrief.fields.forEach(f => briefLines.push(`- ${f}`));
+    }
+    if (callBrief.customQuestions.trim()) {
+      briefLines.push('', 'Admin instructions — follow exactly:');
+      briefLines.push(callBrief.customQuestions.trim());
+    }
+    parts.push(briefLines.join('\n'));
+  }
+
   return parts.join('\n\n');
 }
 
@@ -543,9 +576,10 @@ export function createLLM(
   candidateName: string,
   profileData: Record<string, string>,
   currentDateTime: string,
+  callBrief?: CallBrief,
 ): LLMProvider {
   const provider = process.env.LLM_PROVIDER ?? 'gemini';
-  const systemPrompt = buildSystemPrompt(candidateName, profileData, currentDateTime);
+  const systemPrompt = buildSystemPrompt(candidateName, profileData, currentDateTime, callBrief);
 
   switch (provider) {
     case 'gemini':

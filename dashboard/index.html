@@ -56,6 +56,10 @@
     <span class="tab-icon" aria-hidden="true">📞</span>
     <span class="tab-label">Calls</span>
   </button>
+  <button class="tab-btn" data-tab="callbrief" aria-label="Call Brief">
+    <span class="tab-icon" aria-hidden="true">🎯</span>
+    <span class="tab-label">Call Brief</span>
+  </button>
   <button class="tab-btn" data-tab="testing" aria-label="Testing">
     <span class="tab-icon" aria-hidden="true">🧪</span>
     <span class="tab-label">Testing</span>
@@ -408,6 +412,77 @@
       </div>
     </div>
   </div>
+
+  <!-- ══════════════════════════ CALL BRIEF TAB ═══════════════ -->
+  <section id="tab-callbrief" class="tab-panel" role="tabpanel">
+    <div class="scroll-area">
+
+      <div class="section-label">Call Configuration</div>
+      <div class="section-title">Call Brief</div>
+      <div class="section-desc">
+        Select a candidate to see what's missing from their profile, then choose which fields the agent should focus on — and optionally type specific questions. Saved per candidate.
+      </div>
+
+      <!-- Candidate selector -->
+      <div class="card" style="margin-bottom:14px">
+        <div class="card-title">Select Candidate</div>
+        <div class="field-group" style="margin-top:10px">
+          <div class="field-label">Search</div>
+          <input class="field-input" id="brief-search" type="text" placeholder="Search by name…" autocomplete="off">
+        </div>
+        <div class="field-group" style="margin-top:10px">
+          <div class="field-label">Candidate</div>
+          <div class="scenario-select-wrap">
+            <select id="brief-candidate-select">
+              <option value="">— loading candidates… —</option>
+            </select>
+          </div>
+        </div>
+        <div class="candidate-detail" id="brief-candidate-detail"></div>
+      </div>
+
+      <!-- Brief config (hidden until candidate selected) -->
+      <div id="brief-config" style="display:none">
+
+        <!-- Missing fields -->
+        <div class="section-label" style="margin-top:4px">Profile Gaps</div>
+        <div class="card" style="margin-bottom:14px">
+          <div class="card-title">What's missing for this candidate</div>
+          <div class="card-desc" style="margin-bottom:14px">Missing fields are highlighted. Tap any field to add it to the call brief.</div>
+          <div id="brief-gaps-loading" class="card-desc text-muted">Loading profile…</div>
+          <div id="brief-field-groups" style="display:none"></div>
+        </div>
+
+        <!-- Selected fields summary -->
+        <div id="brief-selected-wrap" style="display:none">
+          <div class="section-label" style="margin-top:4px">Selected Focus Fields</div>
+          <div class="card" style="margin-bottom:14px">
+            <div id="brief-selected-tags" class="brief-selected-tags"></div>
+          </div>
+        </div>
+
+        <!-- Custom questions -->
+        <div class="section-label" style="margin-top:4px">Custom Questions</div>
+        <div class="card" style="margin-bottom:14px">
+          <div class="card-title">Type specific questions or instructions</div>
+          <div class="card-desc" style="margin-bottom:10px">Optional — the agent will weave these in naturally during the call.</div>
+          <textarea class="field-input field-textarea" id="brief-custom-questions"
+            placeholder="e.g. Ask about TAR experience in Sarawak&#10;Confirm whether BOSIET is still current&#10;Find out if they're open to relocation"></textarea>
+        </div>
+
+        <!-- Save -->
+        <button class="call-btn" id="brief-save-btn">Save Brief</button>
+        <button class="prompt-btn-ghost" id="brief-clear-btn" style="width:100%;margin-top:8px;padding:12px">Clear Brief</button>
+
+      </div>
+
+      <div id="brief-no-candidate" class="empty-state" style="margin-top:32px">
+        <div class="empty-icon">🎯</div>
+        <div class="empty-msg">Select a candidate to configure their call brief</div>
+      </div>
+
+    </div>
+  </section>
 
   <!-- ══════════════════════════ TESTING TAB ═══════════════════ -->
   <section id="tab-testing" class="tab-panel" role="tabpanel">

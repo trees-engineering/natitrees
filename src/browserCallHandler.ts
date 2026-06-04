@@ -1,8 +1,9 @@
 import WebSocket from 'ws';
 import { DeepgramBrowserSTT } from './providers/stt/deepgramBrowser';
 import { createBrowserTTS, BrowserTTSProvider } from './tts';
-import { createLLM, getMYTDateTime, LLMProvider } from './llm';
+import { createLLM, getMYTDateTime, LLMProvider, CallBrief } from './llm';
 import { SessionStore } from './interview/sessionStore';
+import { supabase } from './db/supabase';
 
 interface StartMessage { type: 'start'; candidateName?: string; talentId?: string; }
 interface EndMessage   { type: 'end'; }
@@ -16,6 +17,7 @@ export class BrowserCallHandler {
   private candidateName = 'there';
   private isReturning = false;
   private session: SessionStore | null = null;
+  private callBrief: CallBrief | undefined = undefined;
   private agentSpeaking = false;
   private ttsAborted = false;
   private lastInterruptTime = 0;
@@ -61,13 +63,26 @@ export class BrowserCallHandler {
       try {
         await this.session.load();
         this.candidateName = this.session.getCandidateName();
-        // isReturning: true if a previous call summary exists in the profile
         const ctx = this.session.getProfileContext();
         this.isReturning = !!ctx['Previous call summary'];
         console.log(`[browser-voice] Loaded profile for ${this.candidateName} (returning=${this.isReturning})`);
       } catch (err) {
         console.error('[browser-voice] Failed to load profile:', err);
         this.candidateName = msg.candidateName?.trim() || 'there';
+      }
+
+      try {
+        const { data } = await supabase
+          .from('_call_briefs')
+          .select('fields, custom_questions')
+          .eq('talent_id', msg.talentId)
+          .maybeSingle();
+        if (data) {
+          this.callBrief = { fields: data.fields ?? [], customQuestions: data.custom_questions ?? '' };
+          console.log(`[browser-voice] Call brief loaded for ${this.candidateName}`);
+        }
+      } catch {
+        // no brief — call runs normally
       }
     } else {
       this.candidateName = msg.candidateName?.trim() || 'there';
@@ -115,7 +130,7 @@ export class BrowserCallHandler {
     }
 
     const profileData = this.session?.getProfileContext() ?? {};
-    this.llm = createLLM(this.candidateName, profileData, getMYTDateTime());
+    this.llm = createLLM(this.candidateName, profileData, getMYTDateTime(), this.callBrief);
     this.llm.addMessage('assistant', greeting);
     this.sendJson({ type: 'agent', text: greeting });
 

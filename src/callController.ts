@@ -22,7 +22,7 @@ export async function initiateCall(to: string, candidateName: string, talentId: 
   const amdCallbackUrl = `${process.env.PUBLIC_HTTP_URL}/amd-status`;
   const statusCallbackUrl = `${process.env.PUBLIC_HTTP_URL}/call-status`;
 
-  const [call, assessmentResult] = await Promise.all([
+  const [call, assessmentResult, briefResult] = await Promise.all([
     client.calls.create({
       to,
       from: process.env.TWILIO_PHONE_NUMBER!,
@@ -38,11 +38,19 @@ export async function initiateCall(to: string, candidateName: string, talentId: 
     talentId !== 'manual'
       ? supabase.from('_assessments').select('id').eq('talent_id', talentId).eq('assessor_type', 'ai').limit(1)
       : Promise.resolve({ data: [] }),
+    talentId !== 'manual'
+      ? supabase.from('_call_briefs').select('fields, custom_questions').eq('talent_id', talentId).maybeSingle()
+      : Promise.resolve({ data: null }),
   ]);
 
   console.log(`[returning-check] talentId=${talentId} data=${JSON.stringify(assessmentResult.data)} error=${JSON.stringify((assessmentResult as any).error)}`);
   const isReturning = !!(assessmentResult.data && assessmentResult.data.length > 0);
-  registerCall(call.sid, { talentId, candidateName, isReturning });
+
+  const callBrief = briefResult.data
+    ? { fields: briefResult.data.fields ?? [], customQuestions: briefResult.data.custom_questions ?? '' }
+    : undefined;
+
+  registerCall(call.sid, { talentId, candidateName, isReturning, callBrief });
   console.log(`[call] Calling ${candidateName} at ${to} — SID: ${call.sid} (returning=${isReturning})`);
   void preGenerateGreeting(call.sid, candidateName, isReturning);
   return call.sid;

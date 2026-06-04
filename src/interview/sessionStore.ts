@@ -44,106 +44,7 @@ export class SessionStore {
   }
 
   getProfileContext(): Record<string, string> {
-    const p = this.profile;
-    if (!p) return {};
-    const ctx: Record<string, string> = {};
-
-    const add = (key: string, val: string | null | undefined) => {
-      if (val && val.trim()) ctx[key] = val;
-    };
-    const addArr = (key: string, arr: string[] | null | undefined) => {
-      if (arr?.length) ctx[key] = arr.join(', ');
-    };
-
-    // Basic
-    add('Headline', p.headline);
-    const locationParts = [p.city, p.country, p.location].filter(Boolean);
-    if (locationParts.length) ctx['Location'] = locationParts.join(', ');
-
-    // Professional identity — keys match MATCHING_FIELDS gap detection in llm.ts
-    add('Job function', p.job_function);
-    addArr('Secondary functions', p.secondary_functions);
-    add('Discipline', p.primary_discipline ?? p.discipline);
-    addArr('Secondary disciplines', p.secondary_disciplines);
-    add('Job family', p.job_family);
-    add('Role type', p.career_track);
-    add('Current role and title', p.role_archetype);
-    add('Seniority and authority', [p.seniority_level, p.authority_level].filter(Boolean).join(' / ') || null);
-    if (p.tl_band != null) ctx['Years of experience'] = `TL band ${p.tl_band}`;
-
-    // Experience breadth
-    addArr('Asset sectors', p.asset_verticals?.length ? p.asset_verticals : p.asset_experience ?? []);
-    addArr('Systems and equipment', p.primary_systems);
-    addArr('Project phases', p.phase_exposure);
-    addArr('Regions worked', p.regions_worked?.length ? p.regions_worked : p.regional_experience ?? []);
-    addArr('Work environment', p.work_environments_experienced);
-    addArr('Deliverables owned', p.deliverables);
-    addArr('Industries', p.industries);
-
-    // Credentials & education
-    addArr('Certifications and licences', p.certifications);
-    add('Education level', p.education_level);
-    add('Education field', p.education_field);
-    addArr('Languages', p.languages);
-    addArr('Soft skills', p.soft_skills);
-
-    // Rich jsonb — serialised for the LLM to read
-    if (Array.isArray(p.experiences) && p.experiences.length > 0) {
-      ctx['Work experience'] = JSON.stringify(p.experiences);
-    }
-    if (Array.isArray(p.credentials_v2) && p.credentials_v2.length > 0) {
-      ctx['Credentials detail'] = JSON.stringify(p.credentials_v2);
-    }
-    if (Array.isArray(p.deliverables_v2) && p.deliverables_v2.length > 0) {
-      ctx['Deliverables detail'] = JSON.stringify(p.deliverables_v2);
-    }
-    if (Array.isArray(p.education) && p.education.length > 0) {
-      ctx['Education history'] = JSON.stringify(p.education);
-    }
-    if (p.scale_factors && Object.keys(p.scale_factors).length > 0) {
-      ctx['Project scale'] = JSON.stringify(p.scale_factors);
-    }
-
-    // Skills from _talent_skills
-    if (p.skills.length > 0) {
-      ctx['Tools and software'] = p.skills
-        .map(s => {
-          let label = s.skill_name;
-          if (s.years_experience) label += ` (${s.years_experience}y)`;
-          return label;
-        })
-        .join(', ');
-    }
-
-    // Availability & commercial
-    add('Visa status', p.visa_status);
-    add('Work rights', p.work_rights);
-    addArr('Mobility', p.mobility_regions);
-    add('Availability', p.availability_status);
-    add('Available from', p.available_from);
-    if (p.notice_period_days != null) ctx['Notice period'] = `${p.notice_period_days} days`;
-    if (p.rate != null) {
-      let rateStr = String(p.rate);
-      if (p.currency) rateStr += ` ${p.currency}`;
-      if (p.rate_type) rateStr += ` (${p.rate_type})`;
-      ctx['Rate'] = rateStr;
-    }
-    if (p.desired_salary_min != null || p.desired_salary_max != null) {
-      const min = p.desired_salary_min ?? '?';
-      const max = p.desired_salary_max ?? '?';
-      ctx['Desired salary'] = `${min}–${max}${p.currency ? ` ${p.currency}` : ''}`;
-    }
-    add('Contract preference', p.rotation_preference);
-    if (p.sponsorship_required != null) {
-      ctx['Sponsorship required'] = p.sponsorship_required ? 'Yes' : 'No';
-    }
-
-    // Previous call context
-    if (p.previousAssessmentSummary) {
-      ctx['Previous call summary'] = p.previousAssessmentSummary;
-    }
-
-    return ctx;
+    return buildProfileContext(this.profile);
   }
 
   async save(history: ConversationMessage[]): Promise<void> {
@@ -177,4 +78,106 @@ export class SessionStore {
       console.log('[sessionStore] Saved to _assessments');
     }
   }
+}
+
+export function buildProfileContext(p: TalentProfile | null): Record<string, string> {
+  if (!p) return {};
+  const ctx: Record<string, string> = {};
+
+  const add = (key: string, val: string | null | undefined) => {
+    if (val && val.trim()) ctx[key] = val;
+  };
+  const addArr = (key: string, arr: string[] | null | undefined) => {
+    if (arr?.length) ctx[key] = arr.join(', ');
+  };
+
+  // Basic
+  add('Headline', p.headline);
+  const locationParts = [p.city, p.country, p.location].filter(Boolean);
+  if (locationParts.length) ctx['Location'] = locationParts.join(', ');
+
+  // Professional identity — keys match MATCHING_FIELDS gap detection in llm.ts
+  add('Job function', p.job_function);
+  addArr('Secondary functions', p.secondary_functions);
+  add('Discipline', p.primary_discipline ?? p.discipline);
+  addArr('Secondary disciplines', p.secondary_disciplines);
+  add('Job family', p.job_family);
+  add('Role type', p.career_track);
+  add('Current role and title', p.role_archetype);
+  add('Seniority and authority', [p.seniority_level, p.authority_level].filter(Boolean).join(' / ') || null);
+  if (p.tl_band != null) ctx['Years of experience'] = `TL band ${p.tl_band}`;
+
+  // Experience breadth
+  addArr('Asset sectors', p.asset_verticals?.length ? p.asset_verticals : p.asset_experience ?? []);
+  addArr('Systems and equipment', p.primary_systems);
+  addArr('Project phases', p.phase_exposure);
+  addArr('Regions worked', p.regions_worked?.length ? p.regions_worked : p.regional_experience ?? []);
+  addArr('Work environment', p.work_environments_experienced);
+  addArr('Deliverables owned', p.deliverables);
+  addArr('Industries', p.industries);
+
+  // Credentials & education
+  addArr('Certifications and licences', p.certifications);
+  add('Education level', p.education_level);
+  add('Education field', p.education_field);
+  addArr('Languages', p.languages);
+  addArr('Soft skills', p.soft_skills);
+
+  // Rich jsonb — serialised for the LLM to read
+  if (Array.isArray(p.experiences) && p.experiences.length > 0) {
+    ctx['Work experience'] = JSON.stringify(p.experiences);
+  }
+  if (Array.isArray(p.credentials_v2) && p.credentials_v2.length > 0) {
+    ctx['Credentials detail'] = JSON.stringify(p.credentials_v2);
+  }
+  if (Array.isArray(p.deliverables_v2) && p.deliverables_v2.length > 0) {
+    ctx['Deliverables detail'] = JSON.stringify(p.deliverables_v2);
+  }
+  if (Array.isArray(p.education) && p.education.length > 0) {
+    ctx['Education history'] = JSON.stringify(p.education);
+  }
+  if (p.scale_factors && Object.keys(p.scale_factors).length > 0) {
+    ctx['Project scale'] = JSON.stringify(p.scale_factors);
+  }
+
+  // Skills from _talent_skills
+  if (p.skills.length > 0) {
+    ctx['Tools and software'] = p.skills
+      .map(s => {
+        let label = s.skill_name;
+        if (s.years_experience) label += ` (${s.years_experience}y)`;
+        return label;
+      })
+      .join(', ');
+  }
+
+  // Availability & commercial
+  add('Visa status', p.visa_status);
+  add('Work rights', p.work_rights);
+  addArr('Mobility', p.mobility_regions);
+  add('Availability', p.availability_status);
+  add('Available from', p.available_from);
+  if (p.notice_period_days != null) ctx['Notice period'] = `${p.notice_period_days} days`;
+  if (p.rate != null) {
+    let rateStr = String(p.rate);
+    if (p.currency) rateStr += ` ${p.currency}`;
+    if (p.rate_type) rateStr += ` (${p.rate_type})`;
+    ctx['Rate'] = rateStr;
+  }
+  if (p.desired_salary_min != null || p.desired_salary_max != null) {
+    const min = p.desired_salary_min ?? '?';
+    const max = p.desired_salary_max ?? '?';
+    ctx['Desired salary'] = `${min}–${max}${p.currency ? ` ${p.currency}` : ''}`;
+  }
+  add('Contract preference', p.rotation_preference);
+  if (p.sponsorship_required != null) {
+    ctx['Sponsorship required'] = p.sponsorship_required ? 'Yes' : 'No';
+  }
+
+  // Previous call context
+  if (p.previousAssessmentSummary) {
+    ctx['Previous call summary'] = p.previousAssessmentSummary;
+  }
+
+  return ctx;
 }
