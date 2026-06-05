@@ -546,6 +546,47 @@
         <div class="empty-msg">Select a candidate to configure their call brief</div>
       </div>
 
+      <!-- ── Manual / Ad-hoc contacts ───────────────────────── -->
+      <div class="section-label" style="margin-top:32px">Ad-hoc Contacts</div>
+      <div class="section-title" style="margin-bottom:6px">Manual Test Contacts</div>
+      <div class="section-desc" style="margin-bottom:16px">
+        Add anyone not in the database — enter a name and number, choose which fields the agent should focus on, then save.
+      </div>
+
+      <!-- Add / edit form -->
+      <div class="card" id="manual-add-card" style="margin-bottom:14px">
+        <div class="card-title" id="manual-form-title">New Contact</div>
+        <div class="field-group" style="margin-top:10px">
+          <div class="field-label">Name <span class="field-required">*</span></div>
+          <input class="field-input" id="manual-name" type="text" placeholder="e.g. John Smith" maxlength="80" autocomplete="off">
+        </div>
+        <div class="field-group" style="margin-top:10px">
+          <div class="field-label">Phone Number <span class="field-required">*</span></div>
+          <input class="field-input" id="manual-phone" type="tel" placeholder="e.g. +44 7700 900000" maxlength="40" autocomplete="off">
+        </div>
+        <div class="field-group" style="margin-top:14px">
+          <div class="field-label">Focus Fields</div>
+          <div class="card-desc" style="margin-bottom:10px">Tap any field to include it in the brief for this contact.</div>
+          <div id="manual-field-groups"></div>
+        </div>
+        <div id="manual-selected-wrap" style="display:none;margin-top:10px">
+          <div class="field-label" style="margin-bottom:6px">Selected</div>
+          <div id="manual-selected-tags" class="brief-selected-tags"></div>
+        </div>
+        <div class="field-group" style="margin-top:14px">
+          <div class="field-label">Custom Questions</div>
+          <textarea class="field-input field-textarea" id="manual-custom-questions"
+            placeholder="e.g. Ask about offshore experience&#10;Confirm availability for next week"></textarea>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:12px">
+          <button class="call-btn" id="manual-add-btn" style="flex:1">Add Contact</button>
+          <button class="prompt-btn-ghost" id="manual-cancel-edit-btn" style="display:none;flex:1;padding:12px">Cancel</button>
+        </div>
+      </div>
+
+      <!-- Saved manual contacts -->
+      <div id="manual-contacts-list"></div>
+
     </div>
   </section>
 

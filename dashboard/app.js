@@ -1645,6 +1645,7 @@ function initCallBrief() {
 
   document.getElementById('brief-save-btn').addEventListener('click', saveBrief);
   document.getElementById('brief-clear-btn').addEventListener('click', clearBrief);
+  initManualContacts();
 }
 
 function populateBriefSelect(list) {
@@ -1768,6 +1769,168 @@ async function clearBrief() {
   document.querySelectorAll('.brief-field-tag').forEach(btn => btn.classList.remove('brief-tag-selected'));
   updateBriefSelectedSummary();
   await saveBrief();
+}
+
+// ═══════════════════════════════════════
+//  MANUAL TEST CONTACTS
+// ═══════════════════════════════════════
+
+let manualContacts = [];
+let manualFormFields = [];
+let manualEditingId = null;
+
+function loadManualContacts() {
+  try { manualContacts = JSON.parse(localStorage.getItem('treelance-manual-contacts') ?? '[]'); }
+  catch { manualContacts = []; }
+}
+
+function saveManualContactsToStorage() {
+  localStorage.setItem('treelance-manual-contacts', JSON.stringify(manualContacts));
+}
+
+function initManualContacts() {
+  loadManualContacts();
+  renderManualFieldGroups();
+  renderManualContacts();
+  document.getElementById('manual-add-btn').addEventListener('click', commitManualContact);
+  document.getElementById('manual-cancel-edit-btn').addEventListener('click', cancelManualEdit);
+}
+
+function renderManualFieldGroups() {
+  const container = document.getElementById('manual-field-groups');
+  container.innerHTML = BRIEF_FIELD_GROUPS.map(group => {
+    const tags = group.fields.map(field => {
+      const isSelected = manualFormFields.includes(field);
+      return `<button class="brief-field-tag brief-tag-filled ${isSelected ? 'brief-tag-selected' : ''}"
+        data-manual-field="${esc(field)}"
+        onclick="toggleManualField(this, '${esc(field)}')"
+      >${esc(field)}</button>`;
+    }).join('');
+    return `<div class="brief-group">
+      <div class="brief-group-label">${esc(group.label)}</div>
+      <div class="brief-tags">${tags}</div>
+    </div>`;
+  }).join('');
+}
+
+function toggleManualField(btn, field) {
+  const idx = manualFormFields.indexOf(field);
+  if (idx === -1) { manualFormFields.push(field); btn.classList.add('brief-tag-selected'); }
+  else { manualFormFields.splice(idx, 1); btn.classList.remove('brief-tag-selected'); }
+  updateManualSelectedSummary();
+}
+
+function updateManualSelectedSummary() {
+  const wrap = document.getElementById('manual-selected-wrap');
+  const tagsEl = document.getElementById('manual-selected-tags');
+  if (manualFormFields.length === 0) { wrap.style.display = 'none'; return; }
+  wrap.style.display = '';
+  tagsEl.innerHTML = manualFormFields.map(f =>
+    `<span class="brief-selected-chip">${esc(f)} <button onclick="removeManualFormField('${esc(f)}')" class="brief-chip-remove">✕</button></span>`
+  ).join('');
+}
+
+function removeManualFormField(field) {
+  manualFormFields = manualFormFields.filter(f => f !== field);
+  document.querySelectorAll('[data-manual-field]').forEach(btn => {
+    if (btn.dataset.manualField === field) btn.classList.remove('brief-tag-selected');
+  });
+  updateManualSelectedSummary();
+}
+
+function commitManualContact() {
+  const name = document.getElementById('manual-name').value.trim();
+  const phone = document.getElementById('manual-phone').value.trim();
+  if (!name || !phone) { showToast('Name and phone are required', true); return; }
+  const customQuestions = document.getElementById('manual-custom-questions').value.trim();
+
+  if (manualEditingId !== null) {
+    const idx = manualContacts.findIndex(c => c.id === manualEditingId);
+    if (idx !== -1) manualContacts[idx] = { id: manualEditingId, name, phone, fields: [...manualFormFields], customQuestions };
+    showToast('Contact updated');
+    resetManualForm();
+  } else {
+    manualContacts.push({ id: Date.now(), name, phone, fields: [...manualFormFields], customQuestions });
+    showToast('Contact added');
+    resetManualForm();
+  }
+  saveManualContactsToStorage();
+  renderManualContacts();
+}
+
+function editManualContact(id) {
+  const c = manualContacts.find(x => x.id === id);
+  if (!c) return;
+  manualEditingId = id;
+  document.getElementById('manual-name').value = c.name;
+  document.getElementById('manual-phone').value = c.phone;
+  document.getElementById('manual-custom-questions').value = c.customQuestions ?? '';
+  manualFormFields = [...(c.fields ?? [])];
+  renderManualFieldGroups();
+  updateManualSelectedSummary();
+  document.getElementById('manual-form-title').textContent = `Editing: ${c.name}`;
+  document.getElementById('manual-add-btn').textContent = 'Save Changes';
+  document.getElementById('manual-cancel-edit-btn').style.display = '';
+  document.getElementById('manual-add-card').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function cancelManualEdit() {
+  manualEditingId = null;
+  resetManualForm();
+}
+
+function resetManualForm() {
+  manualEditingId = null;
+  manualFormFields = [];
+  document.getElementById('manual-name').value = '';
+  document.getElementById('manual-phone').value = '';
+  document.getElementById('manual-custom-questions').value = '';
+  document.getElementById('manual-form-title').textContent = 'New Contact';
+  document.getElementById('manual-add-btn').textContent = 'Add Contact';
+  document.getElementById('manual-cancel-edit-btn').style.display = 'none';
+  renderManualFieldGroups();
+  updateManualSelectedSummary();
+}
+
+function deleteManualContact(id) {
+  manualContacts = manualContacts.filter(c => c.id !== id);
+  saveManualContactsToStorage();
+  if (manualEditingId === id) cancelManualEdit();
+  renderManualContacts();
+  showToast('Contact removed');
+}
+
+function renderManualContacts() {
+  const container = document.getElementById('manual-contacts-list');
+  if (manualContacts.length === 0) {
+    container.innerHTML = `<div class="empty-state" style="margin-top:8px;padding:24px 0">
+      <div class="empty-icon"><i class="ph-duotone ph-user-plus" aria-hidden="true"></i></div>
+      <div class="empty-msg">No manual contacts yet — add one above</div>
+    </div>`;
+    return;
+  }
+  container.innerHTML = manualContacts.map(c => {
+    const fieldChips = (c.fields ?? []).length
+      ? (c.fields ?? []).map(f => `<span class="brief-selected-chip" style="pointer-events:none">${esc(f)}</span>`).join('')
+      : '<span class="card-desc" style="font-size:12px">No fields selected</span>';
+    const q = c.customQuestions
+      ? `<div class="card-desc" style="margin-top:8px;font-size:12px;white-space:pre-wrap">${esc(c.customQuestions)}</div>`
+      : '';
+    return `<div class="card" style="margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
+        <div style="flex:1;min-width:0">
+          <div class="candidate-name" style="margin-bottom:2px">${esc(c.name)}</div>
+          <div class="candidate-meta">${esc(c.phone)}</div>
+          <div class="brief-selected-tags" style="margin-top:8px;flex-wrap:wrap">${fieldChips}</div>
+          ${q}
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0">
+          <button class="prompt-btn-ghost" style="padding:6px 14px;font-size:12px" onclick="editManualContact(${c.id})">Edit</button>
+          <button class="prompt-btn-ghost" style="padding:6px 14px;font-size:12px;color:#e05555;border-color:#e05555" onclick="deleteManualContact(${c.id})">Remove</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
 }
 
 document.addEventListener('DOMContentLoaded', init);
