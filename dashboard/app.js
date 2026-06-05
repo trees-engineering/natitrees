@@ -1846,7 +1846,7 @@ function setMicBtn(label, icon, active) {
   const lbl = document.getElementById('voice-mic-label');
   const ico = document.getElementById('voice-mic-icon');
   if (lbl) lbl.textContent = label;
-  if (ico) ico.textContent = icon;
+  if (ico) ico.innerHTML = icon;
   if (btn) btn.classList.toggle('voice-mic-active', !!active);
 }
 
@@ -1903,12 +1903,12 @@ async function startVoiceSession() {
     source.connect(audioWorkletNode);
 
     voiceSessionActive = true;
-    setMicBtn('End Session', '⏹', true);
+    setMicBtn('End Session', '<i class="ph-duotone ph-stop-circle" aria-hidden="true"></i>', true);
     setVoiceStatus('Connecting…', '');
 
     // Reset transcript
     const box = document.getElementById('voice-transcript');
-    if (box) box.innerHTML = '<div class="empty-state"><div class="empty-icon">🌿</div><div class="empty-msg">Treelance is about to speak…</div></div>';
+    if (box) box.innerHTML = '<div class="empty-state"><div class="empty-icon"><i class="ph-duotone ph-waveform" aria-hidden="true"></i></div><div class="empty-msg">Treelance is about to speak…</div></div>';
   };
 
   voiceWs.onmessage = async (e) => {
@@ -1966,7 +1966,7 @@ function stopVoiceSession() {
   }
 
   clearAudioQueue();
-  setMicBtn('Start Session', '🎤', false);
+  setMicBtn('Start Session', '<i class="ph-duotone ph-microphone" aria-hidden="true"></i>', false);
   setVoiceStatus('Ready — click to start', '');
 }
 

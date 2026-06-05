@@ -181,8 +181,16 @@ input, textarea, select {
   background: var(--gold-bright);
   border-radius: 0 0 3px 3px;
 }
-.tab-icon  { font-size: 20px; line-height: 1; }
+.tab-icon  { font-size: 20px; line-height: 1; display: flex; align-items: center; justify-content: center; }
 .tab-label { font-size: 10px; font-weight: 700; letter-spacing: 0.2px; }
+
+/* ─── Phosphor icon sizing ───────────────────────────────────── */
+.tab-icon i,
+.empty-icon i,
+.voice-mic-icon i,
+.history-toggle-icon i,
+.call-btn i,
+.action-icon i { font-size: inherit; display: inline-flex; }
 
 /* ─── Main Content ───────────────────────────────────────────── */
 .app-main {
@@ -859,7 +867,7 @@ input, textarea, select {
     width: 3px; height: auto;
     border-radius: 0 3px 3px 0;
   }
-  .tab-icon  { font-size: 17px; }
+  .tab-icon  { font-size: 18px; display: flex; align-items: center; justify-content: flex-start; width: 22px; }
   .tab-label { font-size: 13px; font-weight: 700; }
 
   .app-main   { padding-left: 210px; padding-bottom: 40px; }
