@@ -1395,15 +1395,23 @@ function initPromptEditor() {
 
 let promptVersionCache = [];
 let phModalIndex = null;
+let _restoredContent = null;
 
 async function savePromptSnapshot(master, secondary) {
+  const sec = secondary || '';
+  if (_restoredContent && master === _restoredContent.master && sec === _restoredContent.secondary) {
+    _restoredContent = null;
+    showToast('No changes from restored version — save skipped');
+    return;
+  }
+  _restoredContent = null;
   const labelInput = document.getElementById('prompt-version-label');
   const label = labelInput ? labelInput.value.trim() : '';
   try {
     await fetch('/api/dashboard/prompt-versions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ master, secondary: secondary || '', label }),
+      body: JSON.stringify({ master, secondary: sec, label }),
     });
     if (labelInput) labelInput.value = '';
   } catch {}
@@ -1504,6 +1512,7 @@ function restoreFromModal() {
   if (!entry) return;
   document.getElementById('master-textarea').value = entry.master;
   document.getElementById('secondary-textarea').value = entry.secondary;
+  _restoredContent = { master: entry.master, secondary: entry.secondary || '' };
   closePromptVersionModal();
   showToast('Version loaded — edit if needed, then click Save to apply');
 }
