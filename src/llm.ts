@@ -548,18 +548,19 @@ export function buildSystemPrompt(
 
   if (callBrief && (callBrief.fields.length > 0 || callBrief.customQuestions.trim())) {
     const briefLines = [
-      '# CALL BRIEF — THIS OVERRIDES PHASE 2',
+      '# CALL BRIEF — PRIORITY FOCUS FOR THIS CALL',
       '',
-      'This call has a specific focus set by the admin. Follow these rules exactly:',
+      'The admin has flagged specific gaps to prioritise. Run the call as normal — the brief tells you which threads matter most, not what to say or when.',
       '',
-      '1. Only explore topics related to the fields listed below. Do not open any other threads.',
-      '2. If the talent brings up something unrelated, acknowledge it briefly and steer back to the focus areas.',
-      '3. Cover every field below before closing. Do not end the call with any of them uncovered.',
-      '4. Ask about them one at a time, conversationally — not as a list, not all at once.',
-      '5. Stay warm, direct, and natural. The focused scope is invisible to the talent.',
+      '1. After the opening and greeting, give the candidate one plain sentence explaining the general focus of this call before asking anything. Derive it from the fields below — do not name the fields directly, just describe the theme. Example: if fields relate to availability and work rights → "I wanted to check in on a few things around your work situation." If fields relate to deliverables and tools → "I wanted to follow up on some specifics about your technical background." Never skip this.',
+      '2. Weight the conversation toward the fields below. Surface them when a natural path opens.',
+      '3. Never force a field. If it does not land after one genuine attempt, drop it permanently. A forced question is worse than a gap in the data.',
+      '4. Never announce a topic change. Every transition must grow from something they just said — even a small word connection is enough of a bridge.',
+      '5. If a thread is going well, stay on it — even if it is off the brief. One rich thread beats three forced pivots.',
+      '6. The call structure is unchanged — warm-up, re-orientation for returning callers, open floor, close — all intact. The brief only affects which threads you prioritise in Phase 2.',
     ];
     if (callBrief.fields.length > 0) {
-      briefLines.push('', 'Focus fields — cover all of these, nothing else:');
+      briefLines.push('', 'Priority fields for this call:');
       callBrief.fields.forEach(f => briefLines.push(`- ${f}`));
     }
     if (callBrief.customQuestions.trim()) {
