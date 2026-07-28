@@ -120,37 +120,47 @@ export class CallHandler {
     const candidateName = this.candidateName;
     const meta = getCallMeta(this.callSid);
     const isReturning = meta?.isReturning ?? false;
-
-    const greeting = isReturning
-      ? `Hey ${candidateName}, it's Treelance again from Trees OS. Good to speak with you. Is now a good time?`
-      : `Hey ${candidateName}, this is Treelance from Trees OS — just so you know, you're speaking with an AI. This is just a quick, relaxed chat to get to know you a bit better. Is now an okay time?`;
+    const isManual = meta?.talentId === 'manual';
 
     this.agentSpeaking = true;
     this.agentSpeakingStart = Date.now();
     try {
-      const preGenChunks = getGreetingAudio(this.callSid);
-      if (preGenChunks) {
-        clearGreetingAudio(this.callSid);
-        console.log('[greeting] Playing pre-generated audio');
-        for (const chunk of preGenChunks) {
-          if (this.interrupted) break;
-          this.sendAudioToTwilio(chunk);
-        }
-      } else {
-        console.log('[greeting] Pre-generated audio not ready — using real-time TTS');
-        const sentences = greeting.match(/[^.!?]+[.!?]+/g) ?? [greeting];
-        for (const sentence of sentences) {
-          if (this.interrupted) break;
-          await this.streamToTwilio(sentence.trim());
-        }
-      }
-
       await this.sessionReady;
       const profileData = this.session?.getProfileContext() ?? {};
       const callBrief = getCallMeta(this.callSid)?.callBrief;
-      console.log(`[llm] Building prompt for ${candidateName}${callBrief ? ' (with brief)' : ''}`);
-      this.llm = createLLM(candidateName, profileData, getMYTDateTime(), callBrief);
-      this.llm.addMessage('assistant', greeting);
+
+      if (isManual) {
+        // No fixed script for manual test calls — let the model open the call
+        // itself, following whatever prompt is currently configured.
+        console.log(`[llm] Building prompt for ${candidateName} (manual call)`);
+        this.llm = createLLM(candidateName, profileData, getMYTDateTime(), callBrief, true);
+        await this.speakLLMTurn('(The call has just connected. Begin the call now, exactly as your instructions describe.)');
+      } else {
+        const greeting = isReturning
+          ? `Hey ${candidateName}, it's Treelance again from Trees OS. Good to speak with you. Is now a good time?`
+          : `Hey ${candidateName}, this is Treelance from Trees OS — just so you know, you're speaking with an AI. This is just a quick, relaxed chat to get to know you a bit better. Is now an okay time?`;
+
+        const preGenChunks = getGreetingAudio(this.callSid);
+        if (preGenChunks) {
+          clearGreetingAudio(this.callSid);
+          console.log('[greeting] Playing pre-generated audio');
+          for (const chunk of preGenChunks) {
+            if (this.interrupted) break;
+            this.sendAudioToTwilio(chunk);
+          }
+        } else {
+          console.log('[greeting] Pre-generated audio not ready — using real-time TTS');
+          const sentences = greeting.match(/[^.!?]+[.!?]+/g) ?? [greeting];
+          for (const sentence of sentences) {
+            if (this.interrupted) break;
+            await this.streamToTwilio(sentence.trim());
+          }
+        }
+
+        console.log(`[llm] Building prompt for ${candidateName}${callBrief ? ' (with brief)' : ''}`);
+        this.llm = createLLM(candidateName, profileData, getMYTDateTime(), callBrief);
+        this.llm.addMessage('assistant', greeting);
+      }
     } finally {
       this.agentSpeaking = false;
     }
@@ -159,6 +169,45 @@ export class CallHandler {
       const pending = this.pendingUtterance;
       this.pendingUtterance = null;
       await this.handleCandidateSpeech(pending);
+    }
+  }
+
+  // Drives the LLM's own opening turn for manual calls — mirrors the streaming
+  // logic in handleCandidateSpeech but is kicked off by a synthetic system nudge
+  // instead of real candidate speech, since there's no fixed script to play.
+  private async speakLLMTurn(kickoff: string): Promise<void> {
+    if (!this.llm) return;
+    this.llm.addMessage('user', kickoff);
+
+    let buffer = '';
+    let fullResponse = '';
+    try {
+      for await (const chunk of this.llm.respondStream()) {
+        buffer += chunk;
+        fullResponse += chunk;
+
+        const { complete, remainder } = this.extractSentences(buffer);
+        buffer = remainder;
+
+        for (const sentence of complete) {
+          await this.streamToTwilio(sentence);
+          if (this.interrupted) break;
+        }
+        if (this.interrupted) break;
+      }
+      if (!this.interrupted && buffer.trim()) {
+        await this.streamToTwilio(buffer.trim());
+      }
+    } catch (err) {
+      console.error('[llm] Error generating opening line:', err);
+      fullResponse = "Hi, this is an AI assistant calling — is now an okay time to talk?";
+      await this.streamToTwilio(fullResponse);
+    }
+
+    const cleanResponse = fullResponse.replace('[END_CALL]', '').trim();
+    if (cleanResponse) {
+      this.llm.addMessage('assistant', cleanResponse);
+      console.log(`[agent] ${cleanResponse}`);
     }
   }
 

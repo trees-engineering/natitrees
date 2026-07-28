@@ -52,7 +52,9 @@ export async function initiateCall(to: string, candidateName: string, talentId: 
 
   registerCall(call.sid, { talentId, candidateName, isReturning, callBrief });
   console.log(`[call] Calling ${candidateName} at ${to} — SID: ${call.sid} (returning=${isReturning})`);
-  void preGenerateGreeting(call.sid, candidateName, isReturning);
+  if (talentId !== 'manual') {
+    void preGenerateGreeting(call.sid, candidateName, isReturning);
+  }
   return call.sid;
 }
 

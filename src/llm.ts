@@ -521,6 +521,7 @@ export function buildSystemPrompt(
   profileData: Record<string, string>,
   currentDateTime: string,
   callBrief?: CallBrief,
+  isManual = false,
 ): string {
   const overrides = loadPromptOverrides();
 
@@ -541,10 +542,18 @@ export function buildSystemPrompt(
     ].join('\n\n');
   }
 
-  const knowledgeText = overrides.knowledge?.trim() || DEFAULT_KNOWLEDGE;
-  const parts = [staticPart, knowledgeText];
+  const parts = [staticPart];
+
+  // Manual test calls skip the candidate-recruiting knowledge base and profile
+  // section — they're not tied to a talent record and may not even be about a
+  // candidate call, so that material would just be irrelevant noise.
+  if (!isManual) {
+    const knowledgeText = overrides.knowledge?.trim() || DEFAULT_KNOWLEDGE;
+    parts.push(knowledgeText);
+  }
+
   if (overrides.secondary?.trim()) parts.push(overrides.secondary.trim());
-  parts.push(buildProfileSection(candidateName, profileData));
+  if (!isManual) parts.push(buildProfileSection(candidateName, profileData));
 
   if (callBrief && (callBrief.fields.length > 0 || callBrief.customQuestions.trim())) {
     const briefLines = [
@@ -578,9 +587,10 @@ export function createLLM(
   profileData: Record<string, string>,
   currentDateTime: string,
   callBrief?: CallBrief,
+  isManual = false,
 ): LLMProvider {
   const provider = process.env.LLM_PROVIDER ?? 'gemini';
-  const systemPrompt = buildSystemPrompt(candidateName, profileData, currentDateTime, callBrief);
+  const systemPrompt = buildSystemPrompt(candidateName, profileData, currentDateTime, callBrief, isManual);
 
   switch (provider) {
     case 'gemini':
