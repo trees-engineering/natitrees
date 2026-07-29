@@ -1064,39 +1064,54 @@ input, textarea, select {
 }
 
 /* ─── Active Call Banner ─────────────────────────────────────── */
+/* Default (unmodified) state is "ringing" — navy + gold, distinct from the
+   green "connected" state so recruiters can tell at a glance whether the
+   candidate has actually picked up yet. */
 .active-call-banner {
   display: none;
   position: fixed;
   top: var(--header-h);
   left: 0; right: 0;
   z-index: 150;
-  background: var(--green);
+  background: var(--navy);
   color: #ffffff;
   padding: 10px 18px;
   align-items: center;
   gap: 12px;
-  box-shadow: 0 2px 12px rgba(13,122,88,0.3);
+  box-shadow: 0 2px 12px rgba(11,35,69,0.35);
+  transition: background 0.3s ease, box-shadow 0.3s ease;
 }
 .active-call-banner.visible { display: flex; }
+.active-call-banner.connected {
+  background: var(--green);
+  box-shadow: 0 2px 12px rgba(13,122,88,0.3);
+}
 .active-call-dot {
   width: 10px; height: 10px;
   border-radius: 50%;
-  background: #ffffff;
+  background: var(--gold-bright);
   opacity: 0.9;
   animation: pulse 1.4s ease-in-out infinite;
   flex-shrink: 0;
 }
+.active-call-banner.connected .active-call-dot { background: #ffffff; }
 @keyframes pulse {
   0%, 100% { opacity: 0.9; transform: scale(1); }
   50% { opacity: 0.4; transform: scale(0.8); }
 }
-.active-call-info { flex: 1; display: flex; align-items: center; gap: 10px; min-width: 0; }
+.active-call-info { flex: 1; display: flex; align-items: baseline; gap: 10px; min-width: 0; }
 .active-call-label {
   font-size: 11px; font-weight: 800;
   letter-spacing: 0.8px; text-transform: uppercase;
   opacity: 0.8; flex-shrink: 0;
 }
 .active-call-name { font-size: 14px; font-weight: 700; }
+.active-call-clock {
+  font-family: var(--mono);
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.85;
+}
 .active-call-actions { display: flex; gap: 8px; flex-shrink: 0; }
 .active-call-transcript-btn {
   padding: 6px 12px;
@@ -1140,6 +1155,14 @@ body:has(.active-call-banner.visible) .app-main { padding-top: calc(var(--header
   border-bottom: 1px solid var(--border-sub);
   flex-shrink: 0;
 }
+.transcript-modal-title-wrap { display: flex; align-items: center; gap: 9px; min-width: 0; }
+.transcript-modal-badge {
+  font-size: 10px; font-weight: 800;
+  letter-spacing: 0.05em; text-transform: uppercase;
+  padding: 2px 7px; border-radius: 5px; flex-shrink: 0;
+  background: var(--gold-dim); color: var(--gold);
+}
+.transcript-modal-badge.connected { background: var(--green-dim); color: var(--green); }
 .transcript-close-btn {
   font-size: 16px;
   color: var(--text-3);
@@ -1157,6 +1180,32 @@ body:has(.active-call-banner.visible) .app-main { padding-top: calc(var(--header
   gap: 10px;
 }
 .live-turn { display: flex; flex-direction: column; gap: 3px; }
+
+/* "Still ringing" placeholder — shown instead of clearing the banner when the
+   candidate hasn't picked up yet. */
+.transcript-waiting {
+  display: flex; flex-direction: column; align-items: center; text-align: center;
+  padding: 30px 10px; margin: auto;
+}
+.transcript-waiting-radar { position: relative; width: 52px; height: 52px; margin-bottom: 16px; }
+.transcript-waiting-radar .core { position: absolute; inset: 17px; border-radius: 50%; background: var(--gold); }
+.transcript-waiting-radar .wave {
+  position: absolute; inset: 0; border-radius: 50%; border: 2px solid var(--gold);
+  animation: transcript-radar 1.8s ease-out infinite; opacity: 0;
+}
+.transcript-waiting-radar .wave.w2 { animation-delay: 0.6s; }
+.transcript-waiting-radar .wave.w3 { animation-delay: 1.2s; }
+@keyframes transcript-radar {
+  0% { transform: scale(0.35); opacity: 0.7; }
+  100% { transform: scale(1); opacity: 0; }
+}
+.transcript-waiting-title { font-size: 14.5px; font-weight: 700; color: var(--text); margin-bottom: 5px; }
+.transcript-waiting-sub { font-size: 12.5px; color: var(--text-3); max-width: 30ch; line-height: 1.55; }
+.transcript-waiting-clock {
+  margin-top: 14px; font-family: var(--mono); font-size: 12px; color: var(--text-3);
+  background: var(--bg); border: 1px solid var(--border-sub); border-radius: 20px;
+  padding: 4px 12px; font-variant-numeric: tabular-nums;
+}
 
 @media (min-width: 768px) {
   .active-call-banner { left: 210px; padding: 10px 32px; }
@@ -1762,15 +1811,24 @@ body:has(.active-call-banner.visible) .app-main { padding-top: calc(var(--header
 .live-call-pulse {
   width: 10px; height: 10px;
   border-radius: 50%;
-  background: var(--green);
-  box-shadow: 0 0 0 0 rgba(13, 122, 88, 0.4);
-  animation: live-pulse 1.5s ease-out infinite;
+  background: var(--gold);
+  box-shadow: 0 0 0 0 rgba(196, 154, 38, 0.4);
+  animation: live-pulse-ringing 1.5s ease-out infinite;
   flex-shrink: 0;
+}
+.live-call-active.connected .live-call-pulse {
+  background: var(--green);
+  animation-name: live-pulse;
 }
 @keyframes live-pulse {
   0%   { box-shadow: 0 0 0 0   rgba(13, 122, 88, 0.45); }
   70%  { box-shadow: 0 0 0 9px rgba(13, 122, 88, 0);    }
   100% { box-shadow: 0 0 0 0   rgba(13, 122, 88, 0);    }
+}
+@keyframes live-pulse-ringing {
+  0%   { box-shadow: 0 0 0 0   rgba(196, 154, 38, 0.45); }
+  70%  { box-shadow: 0 0 0 9px rgba(196, 154, 38, 0);    }
+  100% { box-shadow: 0 0 0 0   rgba(196, 154, 38, 0);    }
 }
 .live-call-info { flex: 1; min-width: 0; }
 .live-call-name {
@@ -1782,6 +1840,13 @@ body:has(.active-call-banner.visible) .app-main { padding-top: calc(var(--header
   text-overflow: ellipsis;
 }
 .live-call-meta { font-size: 12px; color: var(--text-3); margin-top: 2px; }
+.live-call-meta .badge {
+  display: inline-block; font-size: 10px; font-weight: 800; letter-spacing: 0.04em;
+  text-transform: uppercase; padding: 1px 6px; border-radius: 4px; margin-right: 6px;
+  background: var(--gold-dim); color: var(--gold);
+}
+.live-call-active.connected .live-call-meta .badge { background: var(--green-dim); color: var(--green); }
+.live-call-meta .clock { font-family: var(--mono); font-variant-numeric: tabular-nums; }
 .live-call-goto-btn {
   background: var(--navy-pale);
   color: var(--navy-light);

@@ -821,10 +821,11 @@
 
 <!-- Active Call Banner -->
 <div class="active-call-banner" id="active-call-banner">
-  <div class="active-call-dot"></div>
+  <div class="active-call-dot" id="active-call-dot"></div>
   <div class="active-call-info">
-    <span class="active-call-label">Live Call</span>
+    <span class="active-call-label" id="active-call-label">Ringing</span>
     <span class="active-call-name" id="active-call-name"></span>
+    <span class="active-call-clock" id="active-call-clock"></span>
   </div>
   <div class="active-call-actions">
     <button class="active-call-transcript-btn" id="active-transcript-btn">View Transcript</button>
@@ -836,7 +837,10 @@
 <div class="call-modal-overlay" id="transcript-modal-overlay">
   <div class="call-modal transcript-modal">
     <div class="transcript-modal-header">
-      <div class="call-modal-title" id="transcript-modal-title">Live Transcript</div>
+      <div class="transcript-modal-title-wrap">
+        <div class="call-modal-title" id="transcript-modal-title">Live Transcript</div>
+        <span class="transcript-modal-badge" id="transcript-modal-badge">Ringing</span>
+      </div>
       <button class="transcript-close-btn" id="transcript-close-btn">✕</button>
     </div>
     <div class="transcript-modal-body" id="transcript-modal-body">

@@ -906,19 +906,49 @@ async function loadCandidates() {
 }
 
 // ── Active call banner ───────────────────────────────────────────
-let activeCall = null; // { callSid, name }
+let activeCall = null; // { callSid, name, status: 'ringing'|'connected', startedAt, connectedAt }
 let transcriptPollTimer = null;
 
-function setActiveCall(callSid, name) {
-  activeCall = { callSid, name };
+function fmtClock(elapsedMs) {
+  const secs = Math.max(0, Math.floor(elapsedMs / 1000));
+  const mm = String(Math.floor(secs / 60)).padStart(2, '0');
+  const ss = String(secs % 60).padStart(2, '0');
+  return `${mm}:${ss}`;
+}
+
+function setActiveCall(callSid, name, opts = {}) {
+  activeCall = {
+    callSid,
+    name,
+    status: opts.status ?? 'ringing',
+    startedAt: opts.startedAt ?? Date.now(),
+    connectedAt: opts.connectedAt ?? null,
+  };
   document.getElementById('active-call-name').textContent = name;
   document.getElementById('active-call-banner').classList.add('visible');
+  updateActiveCallUI();
 }
 
 function clearActiveCall() {
   activeCall = null;
-  document.getElementById('active-call-banner').classList.remove('visible');
+  document.getElementById('active-call-banner').classList.remove('visible', 'connected');
   closeTranscriptModal();
+}
+
+// Keeps the banner's Ringing/Live badge, dot color and live clock in sync —
+// called on every status change and on every clock tick.
+function updateActiveCallUI() {
+  if (!activeCall) return;
+  const connected = activeCall.status === 'connected';
+  document.getElementById('active-call-banner').classList.toggle('connected', connected);
+  document.getElementById('active-call-label').textContent = connected ? 'Live' : 'Ringing';
+  const clockEl = document.getElementById('active-call-clock');
+  if (connected && activeCall.connectedAt) {
+    clockEl.textContent = fmtClock(Date.now() - activeCall.connectedAt);
+  } else {
+    const secs = Math.max(0, Math.floor((Date.now() - activeCall.startedAt) / 1000));
+    clockEl.textContent = `${secs}s`;
+  }
 }
 
 async function endActiveCall() {
@@ -948,6 +978,7 @@ function openTranscriptModal() {
   if (!activeCall) return;
   document.getElementById('transcript-modal-title').textContent = `Live Transcript — ${activeCall.name}`;
   document.getElementById('transcript-modal-overlay').classList.add('visible');
+  updateTranscriptBadge();
   pollTranscript();
   transcriptPollTimer = setInterval(pollTranscript, 2000);
 }
@@ -958,18 +989,53 @@ function closeTranscriptModal() {
   transcriptPollTimer = null;
 }
 
+function updateTranscriptBadge() {
+  const badge = document.getElementById('transcript-modal-badge');
+  const connected = !!activeCall && activeCall.status === 'connected';
+  badge.textContent = connected ? 'Live' : 'Ringing';
+  badge.classList.toggle('connected', connected);
+}
+
+// A call that hasn't been answered yet is a normal, expected state — the endpoint
+// responds 200 with status:'ringing' for it, never a 404. Only a real 404 (the call
+// no longer exists at all) means it actually ended, and that's the one case where the
+// banner should be cleared. Previously any 404 — including "not answered yet" — cleared
+// the banner, so an early click on "View Transcript" made it disappear.
 async function pollTranscript() {
   if (!activeCall) return;
   try {
     const res = await fetch(`/api/dashboard/call-transcript/${activeCall.callSid}`);
-    if (res.status === 404) { clearActiveCall(); return; }
-    const { transcript } = await res.json();
-    renderTranscript(transcript ?? []);
+    if (res.status === 404) {
+      showToast(`Call with ${activeCall.name} ended`);
+      clearActiveCall();
+      return;
+    }
+    const { status, transcript } = await res.json();
+    if (activeCall && status && activeCall.status !== status) {
+      activeCall.status = status;
+      if (status === 'connected' && !activeCall.connectedAt) activeCall.connectedAt = Date.now();
+      updateActiveCallUI();
+    }
+    updateTranscriptBadge();
+    renderTranscript(status, transcript ?? []);
   } catch {}
 }
 
-function renderTranscript(lines) {
+function renderTranscript(status, lines) {
   const body = document.getElementById('transcript-modal-body');
+  if (status === 'ringing') {
+    const secs = activeCall ? Math.max(0, Math.floor((Date.now() - activeCall.startedAt) / 1000)) : 0;
+    body.innerHTML = `
+      <div class="transcript-waiting">
+        <div class="transcript-waiting-radar">
+          <div class="wave"></div><div class="wave w2"></div><div class="wave w3"></div><div class="core"></div>
+        </div>
+        <div class="transcript-waiting-title">Ringing ${esc(activeCall ? activeCall.name : '')}…</div>
+        <div class="transcript-waiting-sub">The transcript will appear the moment they pick up — this call stays active, feel free to leave this open.</div>
+        <div class="transcript-waiting-clock">${secs}s elapsed</div>
+      </div>`;
+    return;
+  }
   if (!lines.length) {
     body.innerHTML = `<div class="empty-state"><div class="empty-msg">Waiting for conversation…</div></div>`;
     return;
@@ -991,11 +1057,16 @@ function initActiveBanner() {
     if (e.target === document.getElementById('transcript-modal-overlay')) closeTranscriptModal();
   });
 
-  // Recover active call on page load
+  // Recover active call on page load — covers calls that are still ringing too.
   fetch('/api/dashboard/active-calls')
     .then(r => r.json())
     .then(({ calls }) => {
-      if (calls && calls.length > 0) setActiveCall(calls[0].callSid, calls[0].candidateName);
+      if (calls && calls.length > 0) {
+        const c = calls[0];
+        setActiveCall(c.callSid, c.candidateName, {
+          status: c.status, startedAt: c.startedAt, connectedAt: c.connectedAt,
+        });
+      }
     })
     .catch(() => {});
 }
@@ -1004,12 +1075,12 @@ function initActiveBanner() {
 //  LIVE CALL STATUS (OVERVIEW CARD)
 // ═══════════════════════════════════════
 
-let liveCallTracked = null; // { callSid, name, startedAt }
+let liveCallTracked = null; // { callSid, name, status, startedAt, connectedAt }
 
 function initCallStatusCard() {
   pollCallStatus();
   setInterval(pollCallStatus, 5000);
-  setInterval(updateCallClock, 1000);
+  setInterval(tickLiveClocks, 1000);
 }
 
 async function pollCallStatus() {
@@ -1018,6 +1089,24 @@ async function pollCallStatus() {
   try {
     const res = await fetch('/api/dashboard/active-calls');
     const { calls } = await res.json();
+
+    // Reconcile the floating banner against the server's view of reality: if the call
+    // we're tracking has dropped out of the active list, it genuinely ended (failed,
+    // busy, no-answer, completed) — clear the banner even if the transcript modal was
+    // never opened, instead of leaving it stuck showing a dead call.
+    if (activeCall) {
+      const match = calls && calls.find(c => c.callSid === activeCall.callSid);
+      if (!match) {
+        showToast(`Call with ${activeCall.name} ended`);
+        clearActiveCall();
+      } else if (activeCall.status !== match.status) {
+        activeCall.status = match.status;
+        activeCall.connectedAt = match.connectedAt ?? activeCall.connectedAt;
+        updateActiveCallUI();
+        updateTranscriptBadge();
+      }
+    }
+
     if (!calls || calls.length === 0) {
       liveCallTracked = null;
       card.innerHTML = `
@@ -1027,33 +1116,47 @@ async function pollCallStatus() {
         </div>`;
     } else {
       const c = calls[0];
-      if (!liveCallTracked || liveCallTracked.callSid !== c.callSid) {
-        liveCallTracked = { callSid: c.callSid, name: c.candidateName, startedAt: Date.now() };
-      }
+      const connected = c.status === 'connected';
+      liveCallTracked = {
+        callSid: c.callSid, name: c.candidateName, status: c.status,
+        startedAt: c.startedAt, connectedAt: c.connectedAt,
+      };
       card.innerHTML = `
-        <div class="live-call-active">
+        <div class="live-call-active${connected ? ' connected' : ''}">
           <div class="live-call-pulse"></div>
           <div class="live-call-info">
             <div class="live-call-name">${esc(c.candidateName)}</div>
-            <div class="live-call-meta">In progress · <span id="live-call-elapsed">00:00</span></div>
+            <div class="live-call-meta"><span class="badge">${connected ? 'Live' : 'Ringing'}</span><span class="clock" id="live-call-elapsed"></span></div>
           </div>
           <button class="live-call-goto-btn" onclick="switchTab('calls')">View</button>
         </div>`;
-      updateCallClock();
+      tickLiveClocks();
     }
   } catch {
     // silently keep last state
   }
 }
 
-function updateCallClock() {
-  if (!liveCallTracked) return;
-  const el = document.getElementById('live-call-elapsed');
-  if (!el) return;
-  const secs = Math.floor((Date.now() - liveCallTracked.startedAt) / 1000);
-  const mm = String(Math.floor(secs / 60)).padStart(2, '0');
-  const ss = String(secs % 60).padStart(2, '0');
-  el.textContent = `${mm}:${ss}`;
+// Single 1s tick that keeps every live-call clock on the page in sync: the Overview
+// card, the floating banner, and the transcript modal's ringing counter if it's open.
+function tickLiveClocks() {
+  const elapsedEl = document.getElementById('live-call-elapsed');
+  if (elapsedEl && liveCallTracked) {
+    if (liveCallTracked.status === 'connected' && liveCallTracked.connectedAt) {
+      elapsedEl.textContent = fmtClock(Date.now() - liveCallTracked.connectedAt);
+    } else {
+      const secs = Math.max(0, Math.floor((Date.now() - liveCallTracked.startedAt) / 1000));
+      elapsedEl.textContent = `${secs}s`;
+    }
+  }
+
+  if (activeCall) updateActiveCallUI();
+
+  const waitingClock = document.querySelector('#transcript-modal-body .transcript-waiting-clock');
+  if (waitingClock && activeCall) {
+    const secs = Math.max(0, Math.floor((Date.now() - activeCall.startedAt) / 1000));
+    waitingClock.textContent = `${secs}s elapsed`;
+  }
 }
 
 function openCallModal(call) {

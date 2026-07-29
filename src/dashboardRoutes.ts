@@ -2,7 +2,8 @@ import { Express, Request, Response } from 'express';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { createLLM, getMYTDateTime, buildDefaultMasterTemplate, buildDefaultKnowledgeTemplate } from './llm';
 import { loadPromptOverrides, savePromptOverrides } from './promptConfig';
-import { getHandler, getActiveCalls } from './activeCallRegistry';
+import { getHandler } from './activeCallRegistry';
+import { getActiveCallSummaries, getCallMeta } from './callStore';
 import { supabase } from './db/supabase';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -709,19 +710,27 @@ export function registerDashboardRoutes(app: Express): void {
     }
   });
 
-  // Active calls list
+  // Active calls list — includes calls still ringing, not just connected ones.
   app.get('/api/dashboard/active-calls', (_req: Request, res: Response) => {
-    res.json({ calls: getActiveCalls() });
+    res.json({ calls: getActiveCallSummaries() });
   });
 
-  // Live transcript for an active call
+  // Live transcript for an active call.
+  // A call that hasn't been answered yet is a normal, expected state — not a 404.
+  // Only a call that no longer exists at all (truly ended) is a 404.
   app.get('/api/dashboard/call-transcript/:callSid', (req: Request, res: Response) => {
-    const handler = getHandler(req.params.callSid);
-    if (!handler) {
-      res.status(404).json({ error: 'Call not found or already ended' });
+    const { callSid } = req.params;
+    const handler = getHandler(callSid);
+    if (handler) {
+      res.json({ status: 'connected', transcript: handler.getTranscript() });
       return;
     }
-    res.json({ transcript: handler.getTranscript() });
+    const meta = getCallMeta(callSid);
+    if (meta) {
+      res.json({ status: 'ringing', transcript: [] });
+      return;
+    }
+    res.status(404).json({ status: 'ended', error: 'Call not found or already ended' });
   });
 
   // End an active call

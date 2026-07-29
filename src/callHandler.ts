@@ -2,7 +2,7 @@ import WebSocket from 'ws';
 import { createSTT, STTProvider } from './stt';
 import { createLLM, getMYTDateTime, LLMProvider } from './llm';
 import { createTTS, TTSProvider } from './tts';
-import { getCallMeta, removeCall, getGreetingAudio, clearGreetingAudio } from './callStore';
+import { getCallMeta, removeCall, markCallConnected, getGreetingAudio, clearGreetingAudio } from './callStore';
 import { registerHandler, removeHandler } from './activeCallRegistry';
 import { endCall } from './callController';
 import { SessionStore } from './interview/sessionStore';
@@ -71,6 +71,7 @@ export class CallHandler {
       this.streamSid = msg.start.streamSid;
       this.callSid = msg.start.callSid;
       registerHandler(this.callSid, this);
+      markCallConnected(this.callSid);
       console.log(`[call] Stream started — SID: ${this.streamSid}`);
       const meta = getCallMeta(this.callSid);
       if (meta) {

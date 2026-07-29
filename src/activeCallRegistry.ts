@@ -13,11 +13,3 @@ export function getHandler(callSid: string): CallHandler | undefined {
 export function removeHandler(callSid: string): void {
   registry.delete(callSid);
 }
-
-export function getActiveCalls(): Array<{ callSid: string; candidateName: string; talentId: string }> {
-  const { getCallMeta } = require('./callStore');
-  return [...registry.keys()].map(sid => {
-    const meta = getCallMeta(sid);
-    return { callSid: sid, candidateName: meta?.candidateName ?? 'Unknown', talentId: meta?.talentId ?? '' };
-  });
-}
