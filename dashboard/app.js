@@ -189,13 +189,19 @@ function renderRecentActivity(data) {
     `<div class="recent-header">Last ${recent.length} call${recent.length !== 1 ? 's' : ''}</div>` +
     recent.map(a => `
       <div class="recent-item">
-        <div class="recent-name">${esc(a.talent_id ?? 'Unknown candidate')}</div>
+        <div class="recent-name">${esc(a._talent?.name ?? a.candidate_name ?? 'Unknown candidate')}</div>
         <div class="recent-meta">
           <span>${a.created_at ? relativeTime(new Date(a.created_at)) : '—'}</span>
-          <span class="assessment-tag tag-voice">${esc(a.channel ?? 'voice')}</span>
+          <span class="assessment-tag tag-voice">${esc(callTypeLabel(a.call_type))}</span>
         </div>
       </div>
     `).join('');
+}
+
+function callTypeLabel(callType) {
+  if (callType === 'manual_test') return '🧪 Manual test';
+  if (callType === 'browser_test') return '🎙️ Browser test';
+  return '📞 Candidate call';
 }
 
 function relativeTime(date) {
@@ -249,7 +255,7 @@ async function loadTranscripts() {
       const date = t.created_at ? new Date(t.created_at) : null;
       const dateStr = date ? date.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }) : '—';
       const timeStr = date ? date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }) : '';
-      const name = t._talent?.name ?? t.talent_id ?? 'Unknown';
+      const name = t._talent?.name ?? t.candidate_name ?? 'Unknown';
       const lines = parseTranscript(t.transcript);
       const snippet = t.ai_summary
         ? `<div class="tx-snippet">${esc(t.ai_summary.length > 110 ? t.ai_summary.slice(0, 110) + '…' : t.ai_summary)}</div>`
@@ -258,7 +264,7 @@ async function loadTranscripts() {
         <div class="tx-card" id="tx-${i}">
           <button class="tx-header" onclick="toggleTranscript(${i})">
             <div class="tx-header-left">
-              <div class="tx-name">${esc(name)}</div>
+              <div class="tx-name">${esc(name)} <span class="tx-turns">${esc(callTypeLabel(t.call_type))}</span></div>
               <div class="tx-meta">${dateStr}${timeStr ? ` · ${timeStr}` : ''} <span class="tx-turns">${lines.length} turns</span></div>
               ${snippet}
             </div>

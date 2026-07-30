@@ -584,7 +584,7 @@ export function registerDashboardRoutes(app: Express): void {
     try {
       const { data, error } = await supabase
         .from('_assessments')
-        .select('talent_id, channel, assessor_type, created_at, _talent(name, phone)')
+        .select('talent_id, candidate_name, call_type, channel, assessor_type, created_at, _talent(name, phone)')
         .order('created_at', { ascending: false })
         .limit(50);
       if (error) throw error;
@@ -599,7 +599,7 @@ export function registerDashboardRoutes(app: Express): void {
     try {
       const { data, error } = await supabase
         .from('_assessments')
-        .select('id, talent_id, transcript, ai_summary, channel, assessor_type, created_at, _talent(name)')
+        .select('id, talent_id, candidate_name, call_type, transcript, ai_summary, channel, assessor_type, created_at, _talent(name)')
         .order('created_at', { ascending: false })
         .limit(100);
       if (error) throw error;

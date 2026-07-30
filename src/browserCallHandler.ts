@@ -2,7 +2,7 @@ import WebSocket from 'ws';
 import { DeepgramBrowserSTT } from './providers/stt/deepgramBrowser';
 import { createBrowserTTS, BrowserTTSProvider } from './tts';
 import { createLLM, getMYTDateTime, LLMProvider, CallBrief } from './llm';
-import { SessionStore } from './interview/sessionStore';
+import { SessionStore, saveTranscript } from './interview/sessionStore';
 import { supabase } from './db/supabase';
 
 interface StartMessage { type: 'start'; candidateName?: string; talentId?: string; }
@@ -242,5 +242,14 @@ export class BrowserCallHandler {
     this.ttsAborted = true;
     this.stt.close();
     console.log('[browser-voice] Session ended');
+
+    const history = this.llm?.getHistory() ?? [];
+    if (history.length === 0) return;
+
+    if (this.session) {
+      void this.session.save(history, 'browser_test');
+    } else {
+      void saveTranscript(this.candidateName, history, 'browser_test');
+    }
   }
 }

@@ -5,7 +5,7 @@ import { createTTS, TTSProvider } from './tts';
 import { getCallMeta, removeCall, markCallConnected, getGreetingAudio, clearGreetingAudio } from './callStore';
 import { registerHandler, removeHandler } from './activeCallRegistry';
 import { endCall } from './callController';
-import { SessionStore } from './interview/sessionStore';
+import { SessionStore, saveTranscript } from './interview/sessionStore';
 
 interface TwilioStartEvent {
   event: 'start';
@@ -36,6 +36,7 @@ export class CallHandler {
   private callEnded = false;
   private callSid = '';
   private candidateName = 'there';
+  private isManual = false;
   private session: SessionStore | null = null;
   private sessionReady: Promise<void> = Promise.resolve();
   private callEndTimer: ReturnType<typeof setTimeout> | null = null;
@@ -76,7 +77,8 @@ export class CallHandler {
       const meta = getCallMeta(this.callSid);
       if (meta) {
         this.candidateName = meta.candidateName || 'there';
-        if (meta.talentId !== 'manual') {
+        this.isManual = meta.talentId === 'manual';
+        if (!this.isManual) {
           this.session = new SessionStore(meta.talentId);
           this.sessionReady = this.session.load().catch(err =>
             console.error('[call] Session load failed:', err)
@@ -397,6 +399,8 @@ export class CallHandler {
     removeCall(this.callSid);
     if (this.session) {
       void this.session.save(history);
+    } else if (this.isManual && history.length > 0) {
+      void saveTranscript(this.candidateName, history, 'manual_test');
     }
   }
 }

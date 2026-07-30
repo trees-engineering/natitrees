@@ -47,13 +47,12 @@ export class SessionStore {
     return buildProfileContext(this.profile);
   }
 
-  async save(history: ConversationMessage[]): Promise<void> {
+  async save(history: ConversationMessage[], callType: CallType = 'candidate'): Promise<void> {
     if (!this.profile) {
       console.warn('[sessionStore] No profile — skipping save');
       return;
     }
 
-    const transcript = history.map(m => `[${m.role}] ${m.content}`).join('\n');
     const answers = this.stateMachine?.getAnswers() ?? {};
     const stillMissing = this.stateMachine?.getPendingFields().map(f => f.key) ?? [];
 
@@ -62,22 +61,59 @@ export class SessionStore {
       fields_still_missing: stillMissing,
     });
 
-    const { error } = await supabase
-      .from('_assessments')
-      .insert({
-        talent_id: this.talentId,
-        transcript,
-        ai_summary: aiSummary,
-        assessor_type: 'ai',
-        channel: 'call',
-      });
-
-    if (error) {
-      console.error('[sessionStore] Failed to save:', error.message);
-    } else {
-      console.log('[sessionStore] Saved to _assessments');
-    }
+    await insertAssessment({
+      talentId: this.talentId,
+      candidateName: this.profile.name ?? null,
+      history,
+      aiSummary,
+      callType,
+    });
   }
+}
+
+// Call types recorded on every saved assessment so real candidate calls can
+// be told apart from test traffic in the dashboard.
+export type CallType = 'candidate' | 'manual_test' | 'browser_test';
+
+interface InsertAssessmentArgs {
+  talentId: string | null;
+  candidateName: string | null;
+  history: ConversationMessage[];
+  aiSummary?: string | null;
+  callType: CallType;
+}
+
+async function insertAssessment({ talentId, candidateName, history, aiSummary, callType }: InsertAssessmentArgs): Promise<void> {
+  const transcript = history.map(m => `[${m.role}] ${m.content}`).join('\n');
+
+  const { error } = await supabase
+    .from('_assessments')
+    .insert({
+      talent_id: talentId,
+      candidate_name: candidateName,
+      transcript,
+      ai_summary: aiSummary ?? null,
+      assessor_type: 'ai',
+      channel: 'call',
+      call_type: callType,
+    });
+
+  if (error) {
+    console.error('[sessionStore] Failed to save:', error.message);
+  } else {
+    console.log(`[sessionStore] Saved to _assessments (call_type=${callType})`);
+  }
+}
+
+// Used for calls with no linked talent profile — manual Twilio test calls and
+// anonymous browser mic test sessions — which SessionStore.save() can't
+// handle since it requires a loaded profile.
+export async function saveTranscript(
+  candidateName: string,
+  history: ConversationMessage[],
+  callType: CallType,
+): Promise<void> {
+  await insertAssessment({ talentId: null, candidateName, history, callType });
 }
 
 export function buildProfileContext(p: TalentProfile | null): Record<string, string> {
