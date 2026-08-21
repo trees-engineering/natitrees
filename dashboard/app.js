@@ -47,6 +47,7 @@ function initTabs() {
     if (tabId === 'prompt') loadPrompt();
     if (tabId === 'calls') loadCandidates();
     if (tabId === 'callbrief') initCallBrief();
+    if (tabId === 'providers') loadProviders();
   }
 
   btns.forEach(btn => {
@@ -1652,6 +1653,157 @@ function esc(str) {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#039;');
+}
+
+// ═══════════════════════════════════════
+//  PROVIDERS & MODELS
+// ═══════════════════════════════════════
+
+async function providersFetchJSON(url, options) {
+  const res = await fetch(url, options);
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || `Request failed (${res.status})`);
+  return data;
+}
+
+function providerKeyHint(provider, keyConfigured) {
+  return keyConfigured[provider]
+    ? ''
+    : `<div class="field-hint" style="color:var(--red)">No API key set for "${esc(provider)}" in .env, calls will fail until one is added.</div>`;
+}
+
+function llmProviderCardHtml(llm) {
+  const models = llm.suggestedModels[llm.active] || [];
+  return `
+    <div class="card" data-provider-card="llm">
+      <div class="card-title" style="display:flex;align-items:center;justify-content:space-between">
+        LLM Provider <span class="provider-val">${esc(llm.active)}</span>
+      </div>
+      <div class="field-group">
+        <div class="field-label">Provider</div>
+        <div class="scenario-select-wrap">
+          <select id="prov-llm-provider">
+            ${llm.options.map(o => `<option value="${esc(o)}" ${o === llm.active ? 'selected' : ''}>${esc(o)}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+      <div class="field-group" style="margin-bottom:14px">
+        <div class="field-label">Model</div>
+        <input class="field-input" id="prov-llm-model" list="prov-llm-model-options" value="${esc(llm.model)}">
+        <datalist id="prov-llm-model-options">
+          ${models.map(m => `<option value="${esc(m)}">`).join('')}
+        </datalist>
+        <div class="field-hint">Any model slug works, these are just suggestions.</div>
+        <div id="prov-llm-keyhint">${providerKeyHint(llm.active, llm.keyConfigured)}</div>
+      </div>
+      <button class="prompt-btn-save" id="prov-llm-save">Save</button>
+    </div>`;
+}
+
+function sttProviderCardHtml(stt) {
+  return `
+    <div class="card" data-provider-card="stt" style="margin-top:14px">
+      <div class="card-title" style="display:flex;align-items:center;justify-content:space-between">
+        STT <span class="provider-val">${esc(stt.active)}</span>
+      </div>
+      <div class="card-desc text-muted">Only one STT provider is wired up right now, nothing to switch.</div>
+      ${providerKeyHint(stt.active, stt.keyConfigured)}
+    </div>`;
+}
+
+function ttsProviderCardHtml(tts) {
+  return `
+    <div class="card" data-provider-card="tts" style="margin-top:14px">
+      <div class="card-title" style="display:flex;align-items:center;justify-content:space-between">
+        TTS <span class="provider-val">${esc(tts.active)}</span>
+      </div>
+      <div class="field-group">
+        <div class="field-label">Provider</div>
+        <div class="scenario-select-wrap">
+          <select id="prov-tts-provider">
+            ${tts.options.map(o => `<option value="${esc(o)}" ${o === tts.active ? 'selected' : ''}>${esc(o)}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+      <div class="field-group" style="margin-bottom:14px">
+        <div class="field-label">Voice ID</div>
+        <input class="field-input" id="prov-tts-voice" value="${esc(tts.voiceId)}">
+        <div id="prov-tts-keyhint">${providerKeyHint(tts.active, tts.keyConfigured)}</div>
+      </div>
+      <button class="prompt-btn-save" id="prov-tts-save">Save</button>
+    </div>`;
+}
+
+async function loadProviders() {
+  const grid = document.getElementById('providers-grid');
+  try {
+    const d = await providersFetchJSON('/api/dashboard/providers');
+    grid.innerHTML = llmProviderCardHtml(d.llm) + sttProviderCardHtml(d.stt) + ttsProviderCardHtml(d.tts);
+    wireProviderCards(d);
+  } catch (err) {
+    grid.innerHTML = `<div class="card"><div class="card-desc text-muted">Failed to load: ${esc(err.message)}</div></div>`;
+  }
+}
+
+function wireProviderCards(d) {
+  // Swapping the provider dropdown swaps the model/voice field's default
+  // and suggestions to match, before anything is saved.
+  document.getElementById('prov-llm-provider').addEventListener('change', (e) => {
+    const provider = e.target.value;
+    const models = d.llm.suggestedModels[provider] || [];
+    document.getElementById('prov-llm-model').value = provider === d.llm.active ? d.llm.model : (models[0] || '');
+    document.getElementById('prov-llm-model-options').innerHTML = models.map(m => `<option value="${esc(m)}">`).join('');
+    document.getElementById('prov-llm-keyhint').innerHTML = providerKeyHint(provider, d.llm.keyConfigured);
+  });
+
+  document.getElementById('prov-tts-provider').addEventListener('change', (e) => {
+    const provider = e.target.value;
+    document.getElementById('prov-tts-keyhint').innerHTML = providerKeyHint(provider, d.tts.keyConfigured);
+  });
+
+  document.getElementById('prov-llm-save').addEventListener('click', async () => {
+    const btn = document.getElementById('prov-llm-save');
+    const llmProvider = document.getElementById('prov-llm-provider').value;
+    const llmModel = document.getElementById('prov-llm-model').value.trim();
+    if (!llmModel) { showToast('Model can\'t be empty', true); return; }
+    btn.disabled = true;
+    btn.textContent = 'Saving…';
+    try {
+      await providersFetchJSON('/api/dashboard/providers', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ llmProvider, llmModel }),
+      });
+      showToast('LLM saved');
+      loadProviders();
+    } catch (err) {
+      showToast(`Failed: ${err.message}`, true);
+      btn.disabled = false;
+      btn.textContent = 'Save';
+    }
+  });
+
+  document.getElementById('prov-tts-save').addEventListener('click', async () => {
+    const btn = document.getElementById('prov-tts-save');
+    const ttsProvider = document.getElementById('prov-tts-provider').value;
+    const ttsVoiceId = document.getElementById('prov-tts-voice').value.trim();
+    if (!ttsVoiceId) { showToast('Voice ID can\'t be empty', true); return; }
+    btn.disabled = true;
+    btn.textContent = 'Saving…';
+    try {
+      await providersFetchJSON('/api/dashboard/providers', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ttsProvider, ttsVoiceId }),
+      });
+      showToast('TTS saved');
+      loadProviders();
+    } catch (err) {
+      showToast(`Failed: ${err.message}`, true);
+      btn.disabled = false;
+      btn.textContent = 'Save';
+    }
+  });
 }
 
 // ═══════════════════════════════════════

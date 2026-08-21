@@ -65,6 +65,10 @@
     <span class="tab-icon" aria-hidden="true"><i class="ph-duotone ph-flask"></i></span>
     <span class="tab-label">Testing</span>
   </button>
+  <button class="tab-btn" data-tab="providers" aria-label="Providers">
+    <span class="tab-icon" aria-hidden="true"><i class="ph-duotone ph-plugs-connected"></i></span>
+    <span class="tab-label">Providers</span>
+  </button>
   <button class="tab-btn" data-tab="prompt" aria-label="Prompt">
     <span class="tab-icon" aria-hidden="true"><i class="ph-duotone ph-pencil-simple"></i></span>
     <span class="tab-label">Prompt</span>
@@ -719,6 +723,24 @@
         </div>
         <div class="transcript" id="transcript"></div>
         <div id="scorecard-wrap"></div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ══════════════════════════ PROVIDERS TAB ═════════════════ -->
+  <section id="tab-providers" class="tab-panel" role="tabpanel">
+    <div class="scroll-area">
+
+      <div class="section-label">Telephony · STT · LLM · TTS</div>
+      <div class="section-title">Providers &amp; Models</div>
+      <div class="section-desc">
+        Switch providers and models here, applies to the next call on this
+        server and is saved to <code>.env</code> so it survives a restart.
+      </div>
+
+      <div id="providers-grid">
+        <div class="card"><div class="card-desc text-muted">Loading…</div></div>
       </div>
 
     </div>

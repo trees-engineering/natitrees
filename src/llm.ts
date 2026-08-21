@@ -1,4 +1,5 @@
 import { GeminiLLM } from './providers/llm/gemini';
+import { IlmuLLM } from './providers/llm/ilmu';
 import { loadPromptOverrides } from './promptConfig';
 
 export interface CallBrief {
@@ -597,6 +598,9 @@ export function createLLM(
   const systemPrompt = buildSystemPrompt(candidateName, profileData, currentDateTime, callBrief, isManual);
 
   switch (provider) {
+    case 'ilmu':
+      console.log(`[llm] Using ILMU (${process.env.ILMU_MODEL ?? 'nemo-super'})`);
+      return new IlmuLLM(systemPrompt);
     case 'gemini':
     default:
       console.log('[llm] Using Gemini');

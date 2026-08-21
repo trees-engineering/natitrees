@@ -5,6 +5,7 @@ import { loadPromptOverrides, savePromptOverrides } from './promptConfig';
 import { getHandler } from './activeCallRegistry';
 import { getActiveCallSummaries, getCallMeta } from './callStore';
 import { supabase } from './db/supabase';
+import { updateEnv } from './envStore';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -406,6 +407,54 @@ VERDICT: [2 sentences — what worked and what to improve]`;
   }
 }
 
+// ─── Providers & Models ─────────────────────────────────────────────────────
+
+// Curated suggestions offered in the dashboard's model picker, not an
+// exhaustive or enforced list, both fields accept any string.
+const SUGGESTED_MODELS: Record<'gemini' | 'ilmu', string[]> = {
+  gemini: ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-2.5-flash-lite', 'gemini-2.0-flash'],
+  ilmu: ['nemo-super', 'ilmu-nemo-nano', 'ilmu-glm-5.1'],
+};
+
+const TTS_VOICE_ENV: Record<string, string> = {
+  elevenlabs: 'ELEVENLABS_VOICE_ID',
+  cartesia: 'CARTESIA_VOICE_ID',
+  fishaudio: 'FISH_AUDIO_VOICE_ID',
+};
+
+function getProvidersSnapshot() {
+  const llmProvider = (process.env.LLM_PROVIDER ?? 'gemini') as 'gemini' | 'ilmu';
+  const ttsProvider = process.env.TTS_PROVIDER ?? 'elevenlabs';
+
+  return {
+    llm: {
+      active: llmProvider,
+      options: ['gemini', 'ilmu'],
+      model: llmProvider === 'ilmu'
+        ? (process.env.ILMU_MODEL ?? 'nemo-super')
+        : (process.env.GEMINI_MODEL ?? 'gemini-2.5-flash'),
+      suggestedModels: SUGGESTED_MODELS,
+      keyConfigured: { gemini: !!process.env.GEMINI_API_KEY, ilmu: !!process.env.ILMU_API_KEY },
+    },
+    stt: {
+      active: process.env.STT_PROVIDER ?? 'deepgram',
+      options: ['deepgram'],
+      keyConfigured: { deepgram: !!process.env.DEEPGRAM_API_KEY },
+    },
+    tts: {
+      active: ttsProvider,
+      options: ['elevenlabs', 'cartesia', 'fishaudio'],
+      voiceId: process.env[TTS_VOICE_ENV[ttsProvider] ?? 'ELEVENLABS_VOICE_ID'] ?? '',
+      keyConfigured: {
+        elevenlabs: !!process.env.ELEVENLABS_API_KEY,
+        cartesia: !!process.env.CARTESIA_API_KEY,
+        fishaudio: !!process.env.FISH_AUDIO_API_KEY,
+      },
+    },
+    note: 'Applies to the next call on this running server, and is saved to .env so it survives a restart.',
+  };
+}
+
 // ─── Route registration ───────────────────────────────────────────────────────
 
 export function registerDashboardRoutes(app: Express): void {
@@ -417,11 +466,60 @@ export function registerDashboardRoutes(app: Express): void {
       timestamp: new Date().toISOString(),
       providers: {
         llm: process.env.LLM_PROVIDER ?? 'gemini',
-        model: process.env.GEMINI_MODEL ?? 'gemini-2.5-flash',
+        model: (process.env.LLM_PROVIDER ?? 'gemini') === 'ilmu'
+          ? (process.env.ILMU_MODEL ?? 'nemo-super')
+          : (process.env.GEMINI_MODEL ?? 'gemini-2.5-flash'),
         stt: process.env.STT_PROVIDER ?? 'deepgram',
         tts: process.env.TTS_PROVIDER ?? 'elevenlabs',
       },
     });
+  });
+
+  // Providers & Models, live-switchable from the dashboard: writes to
+  // process.env immediately (llm.ts/tts.ts read process.env fresh per
+  // call, not cached at startup) and to .env so the choice survives a
+  // restart.
+  app.get('/api/dashboard/providers', (_req: Request, res: Response) => {
+    res.json(getProvidersSnapshot());
+  });
+
+  app.put('/api/dashboard/providers', (req: Request, res: Response) => {
+    const { llmProvider, llmModel, ttsProvider, ttsVoiceId } = req.body as {
+      llmProvider?: string;
+      llmModel?: string;
+      ttsProvider?: string;
+      ttsVoiceId?: string;
+    };
+
+    if (llmProvider !== undefined && !['gemini', 'ilmu'].includes(llmProvider)) {
+      res.status(400).json({ error: `Unknown llmProvider: "${llmProvider}"` });
+      return;
+    }
+    if (ttsProvider !== undefined && !['elevenlabs', 'cartesia', 'fishaudio'].includes(ttsProvider)) {
+      res.status(400).json({ error: `Unknown ttsProvider: "${ttsProvider}"` });
+      return;
+    }
+    const badText = [llmModel, ttsVoiceId].find((v) => v !== undefined && (!v.trim() || /[\r\n]/.test(v)));
+    if (badText !== undefined) {
+      res.status(400).json({ error: 'Model and voice ID must be non-empty, single-line values' });
+      return;
+    }
+
+    const updates: Record<string, string> = {};
+    if (llmProvider !== undefined) updates.LLM_PROVIDER = llmProvider;
+    if (ttsProvider !== undefined) updates.TTS_PROVIDER = ttsProvider;
+
+    if (llmModel !== undefined) {
+      const targetLlm = llmProvider ?? process.env.LLM_PROVIDER ?? 'gemini';
+      updates[targetLlm === 'ilmu' ? 'ILMU_MODEL' : 'GEMINI_MODEL'] = llmModel.trim();
+    }
+    if (ttsVoiceId !== undefined) {
+      const targetTts = ttsProvider ?? process.env.TTS_PROVIDER ?? 'elevenlabs';
+      updates[TTS_VOICE_ENV[targetTts] ?? 'ELEVENLABS_VOICE_ID'] = ttsVoiceId.trim();
+    }
+
+    updateEnv(updates);
+    res.json(getProvidersSnapshot());
   });
 
   // Prompt editor — get current prompt
